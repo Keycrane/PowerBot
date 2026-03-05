@@ -16,6 +16,10 @@ const powerDecay = 1;
 const intervalMs = 20000;
 const recoveryAmount = 65;
 const recoveryDelay = 10000;
+const missingRoleId = '1479226262756261938';
+let missingUserId = null; // To track who gets the role
+const criticalSuccessRoleId = '1479223982900379780';
+const criticalFailureRoleId = '1479223995277775012';
 const powerChannelId = '1017667058261041274';
 const slowChannels = ['1029276114641756251','1034745617399943178','1207493500929835048'];
 
@@ -55,7 +59,7 @@ setInterval(async () => {
 
         await updatePowerMessage();
 
-        // LOCK CHANNEL
+        // Lock channels & give Missing role if power is 0
         if (power === 0) {
             if (!isLocked) {
                 await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
@@ -66,8 +70,19 @@ setInterval(async () => {
                     const ch = client.channels.cache.get(id);
                     if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
                 });
+
+                // Give "Missing" role to last user
+                if (lastLogMessage) {
+                    const member = await channel.guild.members.fetch(lastLogMessage.author.id).catch(() => null);
+                    const role = channel.guild.roles.cache.get(missingRoleId);
+                    if (member && role && !member.roles.cache.has(role.id)) {
+                        member.roles.add(role).catch(console.error);
+                        missingUserId = member.id;
+                    }
+                }
             }
 
+            // Recovery timeout
             if (!recoveryTimeout) {
                 recoveryTimeout = setTimeout(async () => {
                     power += recoveryAmount;
@@ -82,13 +97,23 @@ setInterval(async () => {
                         if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
                     });
 
+                    // Remove Missing role after recovery
+                    if (missingUserId) {
+                        const member = await channel.guild.members.fetch(missingUserId).catch(() => null);
+                        const role = channel.guild.roles.cache.get(missingRoleId);
+                        if (member && role && member.roles.cache.has(role.id)) {
+                            member.roles.remove(role).catch(console.error);
+                            missingUserId = null;
+                        }
+                    }
+
                     await updatePowerMessage();
                     recoveryTimeout = null;
                 }, recoveryDelay);
             }
-        }
-        // UNLOCK IF POWER RETURNS
-        else if (power > 0 && isLocked) {
+
+        // Unlock channels if power > 0
+        } else if (power > 0 && isLocked) {
             await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
             console.log(`Unlocked ${channel.name}`);
             isLocked = false;
@@ -103,6 +128,7 @@ setInterval(async () => {
                 recoveryTimeout = null;
             }
         }
+
     } catch (err) {
         console.error('Error in power interval:', err);
     }
@@ -123,51 +149,55 @@ client.on('messageCreate', async msg => {
         let resultText;
 
         const roll = Math.random();
-        const criticalFailureChance = 0.01; // 1%
-        const criticalSuccessChance = 0.01; // 1%
+        const criticalFailureChance = 0.01;
+        const criticalSuccessChance = 0.01;
 
+        // --- Critical Failure ---
         if (roll < criticalFailureChance) {
-            // Extreme Critical Failure
-            powerChange = -Math.floor(Math.random() * 26) - 50; // -50 to -75
+            powerChange = -Math.floor(Math.random() * 26) - 50;
             power += powerChange;
             if (power < 0) power = 0;
 
-            resultText = "***!!!C41TICAL SY1T3M F4ILU4E!!!***\n*Y0U A43 S0 !$!#$#*\n!@#$% **S010E1** M101D00N\n101 M101L1S 11F10NE\n***REB001 R100IR1D!***\n W13\n *W03*\n **W10**\n ***031***\n ***113***\n **0H3**";
+            resultText = "***!!!C41TICAL SY1T3M F4ILU4E!!!***\n*Y0U A43 S0 !$!#$#*\n!@#$% **S010E1** M101D00N\n101 M101L1S 11F10NE\n***REB001 R100IR1D!***";
 
+            // Give Critical Failure role
+            const member = await msg.guild.members.fetch(msg.author.id).catch(() => null);
+            const role = msg.guild.roles.cache.get(criticalFailureRoleId);
+            if (member && role && !member.roles.cache.has(role.id)) member.roles.add(role).catch(console.error);
+
+        // --- Critical Success ---
         } else if (roll > 1 - criticalSuccessChance) {
-            // Extreme Critical Success
-            powerChange = Math.floor(Math.random() * 26) + 50; // +50 to +75
+            powerChange = Math.floor(Math.random() * 26) + 50;
             power += powerChange;
             if (power > maxPower) power = maxPower;
 
-            resultText = "**!!!CRITICAL REPAIR SUCCESS!!!**\nSYSTEM STABILIZED!\nPOWER SURGE BOOST!\nYOU ARE MY FAVORITE *FLESHBAG*!!! HAVE THIS PRESENT :D";
+            resultText = "**!!!CRITICAL REPAIR SUCCESS!!!**\nSYSTEM STABILIZED!\nPOWER SURGE BOOST!";
 
+            // Give Critical Success role
+            const member = await msg.guild.members.fetch(msg.author.id).catch(() => null);
+            const role = msg.guild.roles.cache.get(criticalSuccessRoleId);
+            if (member && role && !member.roles.cache.has(role.id)) member.roles.add(role).catch(console.error);
+
+        // --- Normal Failure ---
         } else if (roll < 0.15) {
-            // Normal Failure
-            powerChange = -(Math.floor(Math.random() * 11) + 5); // -5 to -15
+            powerChange = -(Math.floor(Math.random() * 11) + 5);
             power += powerChange;
             if (power < 0) power = 0;
 
             const damage = Math.abs(powerChange);
-            if (damage <= 7)
-                resultText = "**Idiot detected:**\nMinor damage caused.";
-            else if (damage <= 11)
-                resultText = "***3RR0R:***\nS3RI0US D4MAG3 D3TECT3D. 5EnD R3AL M4INT3N4NC3-";
-            else
-                resultText = "***?!!15STEM M3L354CTI20.\n57ITI231 3A38U8E!!?***";
+            if (damage <= 7) resultText = "Idiot detected:\nMinor damage caused.";
+            else if (damage <= 11) resultText = "3RR0R:\nS3RI0US D4MAG3 D3TECT3D.";
+            else resultText = "?!!15STEM M3L354CTI20.";
 
+        // --- Normal Success ---
         } else {
-            // Normal Success
-            powerChange = Math.floor(Math.random() * 16) + 5; // +5 to +20
+            powerChange = Math.floor(Math.random() * 16) + 5;
             power += powerChange;
             if (power > maxPower) power = maxPower;
 
-            if (powerChange <= 6)
-                resultText = "Minor repair completed.\nDuctTape detected.";
-            else if (powerChange <= 14)
-                resultText = "System stabilization successful.\nMechanical services exceptional";
-            else
-                resultText = "Critical repair successful!\nThank you.";
+            if (powerChange <= 6) resultText = "Minor repair completed.\nDuctTape usage detected.";
+            else if (powerChange <= 14) resultText = "System stabilization successful.\nMechanical services exceptional";
+            else resultText = "Critical repair successful.\nThank you.";
         }
 
         // Delete previous log
