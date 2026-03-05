@@ -39,6 +39,8 @@ let powerMessage;
 let lastLogMessage = null;
 let lastOperatorId = null;
 
+let processingMessage = false;
+
 let isLocked = false;
 let recoveryTimeout = null;
 
@@ -226,6 +228,9 @@ client.on('messageCreate', async msg => {
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
+    if (processingMessage) return;
+    processingMessage = true;
+
     try {
 
         lastOperatorId = msg.author.id;
@@ -290,59 +295,58 @@ I'll tell the other bots about you :D`;
         // ----- NORMAL FAILURE -----
         else if (roll < 0.15) {
 
-        powerChange = -(Math.floor(Math.random()*11)+5);
-    
-        power += powerChange;
-        if (power < 0) power = 0;
-    
-        if (powerChange >= -7)
-            resultText =
-    `Idiot detected >:(
-    Minor damage caused.`;
-    
-        else if (powerChange >= -11)
-            resultText =
-    `3RR0R.
-    SY5T3M D454G3 D3TEC13D.
-    3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
-    
-        else
-            resultText =
-    `[01011001 01001111 01010101 00100000 01000001 01010010 01000101 00100000 01010100 01001000 01000101 00100000 01001101 01000101 01000001 01001110 01000101 01010011 01010100 00100000 01000010 01000001 01000011 01001011 01000001 01010111 01000001 01011001 00100000 01001101 01000101 01001101 01000010 01000101 01010010 00100000 00111010 01000011]`;
-    }
+            powerChange = -(Math.floor(Math.random()*11)+5);
+
+            power += powerChange;
+            if (power < 0) power = 0;
+
+            if (powerChange >= -7)
+                resultText =
+`Idiot detected >:(
+Minor damage caused.`;
+
+            else if (powerChange >= -11)
+                resultText =
+`3RR0R.
+SY5T3M D454G3 D3TEC13D.
+3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
+
+            else
+                resultText =
+`[01011001 01001111 01010101 00100000 01000001 01010010 01000101 00100000 01010100 01001000 01000101 00100000 01001101 01000101 01000001 01001110 01000101 01010011 01010100 00100000 01000010 01000001 01000011 01001011 01000001 01010111 01000001 01011001 00100000 01001101 01000101 01001101 01000010 01000101 01010010 00100000 00111010 01000011]`;
+        }
 
         // ----- NORMAL SUCCESS -----
         else {
 
-    powerChange = Math.floor(Math.random()*16)+5;
+            powerChange = Math.floor(Math.random()*16)+5;
 
-    power += powerChange;
+            power += powerChange;
 
-    if (power > maxPower) power = maxPower;
+            if (power > maxPower) power = maxPower;
 
-    if (powerChange <= 8)
-        resultText =
+            if (powerChange <= 8)
+                resultText =
 `System stabilization successful.
 Usage of duct tape was detected during repairs.
 Your success has surprised me.`;
 
-    else if (powerChange <= 14)
-        resultText =
+            else if (powerChange <= 14)
+                resultText =
 `System stabilization successful.
 Mechanical services acceptable.
 Thank you :)`;
 
-    else
-        resultText =
+            else
+                resultText =
 `Major repair completed.
 Power grid efficiency restored.
 You make me happy :D`;
+        }
 
-}
-
-if (lastLogMessage) {
-    await lastLogMessage.delete().catch(()=>{});
-}
+        if (lastLogMessage) {
+            await lastLogMessage.delete().catch(()=>{});
+        }
 
         lastLogMessage = await channel.send(
 `POWER GRID TERMINAL
@@ -351,21 +355,26 @@ if (lastLogMessage) {
 Operator: ${msg.author.username}
 
 Notes:
-"${originalMessage}"
+> ${originalMessage}
 
 Result:
 ${resultText}
 
-Power Change: ${powerChange>0?'+':''}${powerChange}%`
+Power Change: ${powerChange>0?'+':''}${powerChange}%
+Current Power: ${power}%`
         );
 
         await updatePowerMessage();
 
     } catch (err) {
 
-        console.error("Log system error:", err);
+    console.error("Log system error:", err);
 
-    }
+} finally {
+
+    processingMessage = false;
+
+}
 
 });
 
