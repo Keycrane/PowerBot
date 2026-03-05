@@ -16,9 +16,9 @@ const client = new Client({
 // ----- Configuration -----
 let power = 100;
 const maxPower = 100;
-const powerDecay = 5;        // Power lost per interval
-const intervalMs = 60000;    // 1 minute
-const recoveryAmount = 10;   // Power restored after delay
+const powerDecay = 1;        // Power lost per interval
+const intervalMs = 1000;    // 1 minute
+const recoveryAmount = 99;   // Power restored after delay
 const recoveryDelay = 120000; // 2 minutes after hitting 0
 let isLocked = false;
 let recoveryTimeout;
@@ -125,7 +125,7 @@ setInterval(handlePowerInterval, intervalMs);
 // ----- Increase Power on Messages -----
 client.on('messageCreate', msg => {
     if (msg.author.bot) return;
-    power += 5;
+    power += 5; // How much a message restores
     if (power > maxPower) power = maxPower;
 });
 
