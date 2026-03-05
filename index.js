@@ -12,10 +12,10 @@ const client = new Client({
 // ----- Configuration -----
 let power = 100;           // Starting power
 const maxPower = 100;      // Maximum power
-const powerDecay = 10;      // Power lost per interval
-const intervalMs = 5000;   // Interval for power drain (ms)
-const recoveryAmount = 45; // Power restored after recovery delay
-const recoveryDelay = 5000; // 2 minutes in ms
+const powerDecay = 1;      // Power lost per interval
+const intervalMs = 20000;   // Interval for power drain (ms)
+const recoveryAmount = 65; // Power restored after recovery delay
+const recoveryDelay = 10000; // 2 minutes in ms
 const powerChannelId = '1017667058261041274'; // Main power channel ID
 const slowChannels = ['1029276114641756251','1034745617399943178','1207493500929835048']; // Channels for slowmode
 
@@ -116,7 +116,7 @@ setInterval(async () => {
 // ----- Increase Power on Messages (Instant Update) -----
 client.on('messageCreate', async msg => {
     if (msg.author.bot) return;
-    power += 5;          // Increase power per message
+    power += 20;          // Increase power per message
     if (power > maxPower) power = maxPower;
     await updatePowerMessage(); // Instantly refresh bar
 });
