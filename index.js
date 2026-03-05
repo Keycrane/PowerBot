@@ -4,24 +4,25 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 
 // ----- Bot Setup -----
-const TOKEN = process.env.TOKEN; // Replit secret
+const TOKEN = process.env.TOKEN;
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
 // ----- Configuration -----
-let power = 100;           // Starting power
-const maxPower = 100;      // Maximum power
-const powerDecay = 1;      // Power lost per interval
-const intervalMs = 20000;   // Interval for power drain (ms)
-const recoveryAmount = 65; // Power restored after recovery delay
-const recoveryDelay = 10000; // 2 minutes in ms
-const powerChannelId = '1017667058261041274'; // Main power channel ID
-const slowChannels = ['1029276114641756251','1034745617399943178','1207493500929835048']; // Channels for slowmode
+let power = 100;
+const maxPower = 100;
+const powerDecay = 1;
+const intervalMs = 20000;
+const recoveryAmount = 65;
+const recoveryDelay = 10000;
+const powerChannelId = '1017667058261041274';
+const slowChannels = ['1029276114641756251','1034745617399943178','1207493500929835048'];
 
-let powerMessage;          // Stores the message displaying power
-let isLocked = false;      // Tracks if main channel is locked
-let recoveryTimeout = null; // Tracks recovery timer
+let powerMessage;
+let lastLogMessage = null;
+let isLocked = false;
+let recoveryTimeout = null;
 
 // ----- Update Power Bar Message -----
 async function updatePowerMessage() {
@@ -43,6 +44,7 @@ async function updatePowerMessage() {
 // ----- Power Interval (with Recovery Logic) -----
 setInterval(async () => {
     try {
+
         const channel = client.channels.cache.get(powerChannelId);
         if (!channel || !channel.isTextBased()) return;
 
@@ -54,87 +56,151 @@ setInterval(async () => {
 
         await updatePowerMessage();
 
-        // If power is 0, lock channel and start recovery if not already
+        // LOCK CHANNEL
         if (power === 0) {
+
             if (!isLocked) {
-                await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
+
+                await channel.permissionOverwrites.edit(
+                    channel.guild.roles.everyone,
+                    { SendMessages: false }
+                );
+
                 console.log(`Locked ${channel.name}`);
                 isLocked = true;
 
-                // Apply slowmode
                 slowChannels.forEach(id => {
                     const ch = client.channels.cache.get(id);
-                    if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
+                    if (ch && ch.isTextBased())
+                        ch.setRateLimitPerUser(10).catch(console.error);
                 });
+
             }
 
-            // Start recovery timer if not already running
             if (!recoveryTimeout) {
+
                 recoveryTimeout = setTimeout(async () => {
+
                     power += recoveryAmount;
                     if (power > maxPower) power = maxPower;
 
-                    await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
+                    await channel.permissionOverwrites.edit(
+                        channel.guild.roles.everyone,
+                        { SendMessages: true }
+                    );
+
                     console.log(`Unlocked ${channel.name} after recovery`);
                     isLocked = false;
 
-                    // Remove slowmode
                     slowChannels.forEach(id => {
                         const ch = client.channels.cache.get(id);
-                        if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
+                        if (ch && ch.isTextBased())
+                            ch.setRateLimitPerUser(0).catch(console.error);
                     });
 
                     await updatePowerMessage();
-                    recoveryTimeout = null; // clear timeout so it can run again
+
+                    recoveryTimeout = null;
+
                 }, recoveryDelay);
+
             }
 
-        } else if (power > 0 && isLocked) {
-            // If power > 0 and channel is locked, unlock immediately
-            await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
+        }
+
+        // UNLOCK IF POWER RETURNS
+        else if (power > 0 && isLocked) {
+
+            await channel.permissionOverwrites.edit(
+                channel.guild.roles.everyone,
+                { SendMessages: true }
+            );
+
             console.log(`Unlocked ${channel.name}`);
             isLocked = false;
 
-            // Remove slowmode
             slowChannels.forEach(id => {
                 const ch = client.channels.cache.get(id);
-                if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
+                if (ch && ch.isTextBased())
+                    ch.setRateLimitPerUser(0).catch(console.error);
             });
 
-            // Cancel any pending recovery timer
             if (recoveryTimeout) {
                 clearTimeout(recoveryTimeout);
                 recoveryTimeout = null;
             }
+
         }
 
     } catch (err) {
         console.error('Error in power interval:', err);
     }
+
 }, intervalMs);
 
-// ----- Increase Power on Messages (Instant Update) -----
+// ----- Message Log + Power Increase -----
 client.on('messageCreate', async msg => {
+
     if (msg.author.bot) return;
-    power += 20;          // Increase power per message
-    if (power > maxPower) power = maxPower;
-    await updatePowerMessage(); // Instantly refresh bar
+
+    const channel = client.channels.cache.get(powerChannelId);
+    if (!channel || msg.channel.id !== powerChannelId) return;
+
+    try {
+
+        // Delete user message
+        await msg.delete().catch(()=>{});
+
+        // Increase power
+        power += 20;
+        if (power > maxPower) power = maxPower;
+
+        // Delete previous log
+        if (lastLogMessage) {
+            await lastLogMessage.delete().catch(()=>{});
+        }
+
+        // Create new log
+        lastLogMessage = await channel.send(
+`POWER GRID TERMINAL
+-------------------------
+
+Operator: ${msg.author.username}
+
+Notes:
+"${msg.content}"
+
+Result:
++20% system power restored.`
+        );
+
+        // Update power bar instantly
+        await updatePowerMessage();
+
+    } catch (err) {
+        console.error("Log system error:", err);
+    }
+
 });
 
-// ----- Keep-Alive Server for Replit -----
+// ----- Keep-Alive Server -----
 const app = express();
 app.get('/', (req, res) => res.send('Bot is alive!'));
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
-// ----- Global Error Handling -----
+// ----- Error Handling -----
 process.on('unhandledRejection', err => console.error('Unhandled promise rejection:', err));
 process.on('uncaughtException', err => console.error('Uncaught exception:', err));
 
 // ----- Login Bot -----
 client.once('ready', () => {
+
     console.log(`Logged in as ${client.user.tag}`);
+
     updatePowerMessage();
+
 });
 
 client.login(TOKEN);
