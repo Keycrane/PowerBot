@@ -21,18 +21,18 @@ const intervalMs = 20000;
 const recoveryAmount = 65;
 const recoveryDelay = 10000;
 
-const missingRoleId = '1479226262756261938';
+const missingRoleId = '1479263627122053203';
 let missingUserId = null;
 
-const criticalSuccessRoleId = '1479223982900379780';
-const criticalFailureRoleId = '1479223995277775012';
+const criticalSuccessRoleId = '1479263606368501804';
+const criticalFailureRoleId = '1479263624328384662';
 
-const powerChannelId = '1017667058261041274';
+const powerChannelId = '1074684871852691488';
 
 const slowChannels = [
-    '1029276114641756251',
-    '1034745617399943178',
-    '1207493500929835048'
+    '1074685958580080640',
+    '1074687038391074877',
+    '1074705588761677845'
 ];
 
 let powerMessage;
