@@ -28,7 +28,7 @@ async function updatePowerMessage() {
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || !channel.isTextBased()) return;
 
-    const barLength = 100;
+    const barLength = 20;
     const filled = Math.max(0, Math.floor((power / maxPower) * barLength));
     const empty = barLength - filled;
     const bar = '█'.repeat(filled) + '░'.repeat(empty);
