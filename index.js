@@ -12,7 +12,7 @@ const client = new Client({
 let power = 100;             // Starting power
 const maxPower = 100;
 const powerDecay = 1;        // Power lost per decay interval
-const decayIntervalMs = 5000; // 5 seconds
+const decayIntervalMs = 10000; // 5 seconds
 const powerChannelId = '1017667058261041274'; // Main power channel
 const slowChannels = ['1029276114641756251','1034745617399943178','1207493500929835048'];
 
