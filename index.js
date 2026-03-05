@@ -12,7 +12,7 @@ const client = new Client({
 // ----- Configuration -----
 let power = 100;           // Starting power
 const maxPower = 100;      // Maximum power
-const powerDecay = 1;      // Power lost per interval
+const powerDecay = 10;      // Power lost per interval
 const intervalMs = 5000;   // Interval for power drain (ms)
 const recoveryAmount = 45; // Power restored after recovery delay
 const recoveryDelay = 5000; // 2 minutes in ms
