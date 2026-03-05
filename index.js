@@ -15,7 +15,7 @@ const maxPower = 100;      // Maximum power
 const powerDecay = 1;      // Power lost per interval
 const intervalMs = 5000;   // Interval for power drain (ms)
 const recoveryAmount = 45; // Power restored after recovery delay
-const recoveryDelay = 10000; // 2 minutes in ms
+const recoveryDelay = 5000; // 2 minutes in ms
 const powerChannelId = '1017667058261041274'; // Main power channel ID
 const slowChannels = ['1029276114641756251','1034745617399943178','1207493500929835048']; // Channels for slowmode
 
