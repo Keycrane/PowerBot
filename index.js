@@ -44,7 +44,6 @@ async function updatePowerMessage() {
 // ----- Power Interval (with Recovery Logic) -----
 setInterval(async () => {
     try {
-
         const channel = client.channels.cache.get(powerChannelId);
         if (!channel || !channel.isTextBased()) return;
 
@@ -58,109 +57,125 @@ setInterval(async () => {
 
         // LOCK CHANNEL
         if (power === 0) {
-
             if (!isLocked) {
-
-                await channel.permissionOverwrites.edit(
-                    channel.guild.roles.everyone,
-                    { SendMessages: false }
-                );
-
+                await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
                 console.log(`Locked ${channel.name}`);
                 isLocked = true;
 
                 slowChannels.forEach(id => {
                     const ch = client.channels.cache.get(id);
-                    if (ch && ch.isTextBased())
-                        ch.setRateLimitPerUser(10).catch(console.error);
+                    if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
                 });
-
             }
 
             if (!recoveryTimeout) {
-
                 recoveryTimeout = setTimeout(async () => {
-
                     power += recoveryAmount;
                     if (power > maxPower) power = maxPower;
 
-                    await channel.permissionOverwrites.edit(
-                        channel.guild.roles.everyone,
-                        { SendMessages: true }
-                    );
-
+                    await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
                     console.log(`Unlocked ${channel.name} after recovery`);
                     isLocked = false;
 
                     slowChannels.forEach(id => {
                         const ch = client.channels.cache.get(id);
-                        if (ch && ch.isTextBased())
-                            ch.setRateLimitPerUser(0).catch(console.error);
+                        if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
                     });
 
                     await updatePowerMessage();
-
                     recoveryTimeout = null;
-
                 }, recoveryDelay);
-
             }
-
         }
-
         // UNLOCK IF POWER RETURNS
         else if (power > 0 && isLocked) {
-
-            await channel.permissionOverwrites.edit(
-                channel.guild.roles.everyone,
-                { SendMessages: true }
-            );
-
+            await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
             console.log(`Unlocked ${channel.name}`);
             isLocked = false;
 
             slowChannels.forEach(id => {
                 const ch = client.channels.cache.get(id);
-                if (ch && ch.isTextBased())
-                    ch.setRateLimitPerUser(0).catch(console.error);
+                if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
             });
 
             if (recoveryTimeout) {
                 clearTimeout(recoveryTimeout);
                 recoveryTimeout = null;
             }
-
         }
-
     } catch (err) {
         console.error('Error in power interval:', err);
     }
-
 }, intervalMs);
 
-// ----- Message Log + Power Increase -----
+// ----- Message Log + Random Power System with Criticals -----
 client.on('messageCreate', async msg => {
-
     if (msg.author.bot) return;
 
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
     try {
-
-        // Delete user message
+        const originalMessage = msg.content;
         await msg.delete().catch(()=>{});
 
-        // Increase power
-        power += 20;
-        if (power > maxPower) power = maxPower;
+        let powerChange;
+        let resultText;
+
+        const roll = Math.random();
+        const criticalFailureChance = 0.01; // 1%
+        const criticalSuccessChance = 0.01; // 1%
+
+        if (roll < criticalFailureChance) {
+            // Extreme Critical Failure
+            powerChange = -Math.floor(Math.random() * 26) - 50; // -50 to -75
+            power += powerChange;
+            if (power < 0) power = 0;
+
+            resultText = "***!!!C41TICAL SY1T3M F4ILU4E!!!***\n*Y0U A43 S0 !$!#$#*\n!@#$% **S010E1** M101D00N\n101 M101L1S 11F10NE\n***REB001 R100IR1D!***\n W13\n *W03*\n **W10**\n ***031***\n ***113***\n **0H3**";
+
+        } else if (roll > 1 - criticalSuccessChance) {
+            // Extreme Critical Success
+            powerChange = Math.floor(Math.random() * 26) + 50; // +50 to +75
+            power += powerChange;
+            if (power > maxPower) power = maxPower;
+
+            resultText = "**!!!CRITICAL REPAIR SUCCESS!!!**\nSYSTEM STABILIZED!\nPOWER SURGE BOOST!\nYOU ARE MY FAVORITE *FLESHBAG*!!! HAVE THIS PRESENT :D";
+
+        } else if (roll < 0.15) {
+            // Normal Failure
+            powerChange = -(Math.floor(Math.random() * 11) + 5); // -5 to -15
+            power += powerChange;
+            if (power < 0) power = 0;
+
+            const damage = Math.abs(powerChange);
+            if (damage <= 7)
+                resultText = "**Idiot detected:**\nMinor damage caused.";
+            else if (damage <= 11)
+                resultText = "***3RR0R:***\nS3RI0US D4MAG3 D3TECT3D. 5EnD R3AL M4INT3N4NC3-";
+            else
+                resultText = "***?!!15STEM M3L354CTI20.\n57ITI231 3A38U8E!!?***";
+
+        } else {
+            // Normal Success
+            powerChange = Math.floor(Math.random() * 16) + 5; // +5 to +20
+            power += powerChange;
+            if (power > maxPower) power = maxPower;
+
+            if (powerChange <= 6)
+                resultText = "Minor repair completed.\nDuctTape detected.";
+            else if (powerChange <= 14)
+                resultText = "System stabilization successful.\nMechanical services exceptional";
+            else
+                resultText = "Critical repair successful!\nThank you.";
+        }
 
         // Delete previous log
         if (lastLogMessage) {
             await lastLogMessage.delete().catch(()=>{});
         }
 
-        // Create new log
+        // Send new log
         lastLogMessage = await channel.send(
 `POWER GRID TERMINAL
 -------------------------
@@ -168,19 +183,19 @@ client.on('messageCreate', async msg => {
 Operator: ${msg.author.username}
 
 Notes:
-"${msg.content}"
+"${originalMessage}"
 
 Result:
-+20% system power restored.`
+${resultText}
+
+Power Change: ${powerChange > 0 ? '+' : ''}${powerChange}%`
         );
 
-        // Update power bar instantly
         await updatePowerMessage();
 
     } catch (err) {
         console.error("Log system error:", err);
     }
-
 });
 
 // ----- Keep-Alive Server -----
@@ -196,11 +211,8 @@ process.on('uncaughtException', err => console.error('Uncaught exception:', err)
 
 // ----- Login Bot -----
 client.once('ready', () => {
-
     console.log(`Logged in as ${client.user.tag}`);
-
     updatePowerMessage();
-
 });
 
 client.login(TOKEN);
