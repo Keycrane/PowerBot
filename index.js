@@ -192,46 +192,49 @@ client.on('messageCreate', async msg => {
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
-    // ----- SABOTAGE CHECK -----
-    if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
-        const number = parseInt(msg.content.trim());
+// ----- SABOTAGE CHECK -----
+if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
+    const number = parseInt(msg.content.trim());
 
-        if (number === 1) {
-            // Trigger Trivia Sabotage
-            const role = msg.guild.roles.cache.get(backawaysRoleId);
-            if (!role) return;
+    // Delete the original "1" (or any number) immediately
+    await msg.delete().catch(() => {});
 
-            const triviaQuestion = "What is 5 + 3?"; // example, can randomize later
-            const correctAnswer = "8";
+    if (number === 1) {
+        // Trigger Trivia Sabotage
+        const role = msg.guild.roles.cache.get(backawaysRoleId);
+        if (!role) return;
 
-            await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
+        const triviaQuestion = "What is 5 + 3?"; // example, can randomize later
+        const correctAnswer = "8";
 
-            const filter = m => !m.author.bot && role.members.has(m.author.id);
-            const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
+        await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
-            collector.on('collect', async answerMsg => {
-                if (answerMsg.content.trim() === correctAnswer) {
-                    await channel.send(`Nothing happened...`);
-                } else {
-                    power -= 25;
-                    if (power < 0) power = 0;
-                    await channel.send(`*A breif chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
-                    await updatePowerMessage();
-                }
-            });
+        const filter = m => !m.author.bot && role.members.has(m.author.id);
+        const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
 
-            collector.on('end', collected => {
-                if (collected.size === 0) {
-                    power -= 35;
-                    if (power < 0) power = 0;
-                    channel.send(`*Theres a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
-                    updatePowerMessage();
-                }
-            });
-        }
+        collector.on('collect', async answerMsg => {
+            if (answerMsg.content.trim() === correctAnswer) {
+                await channel.send(`Nothing happened...`);
+            } else {
+                power -= 25;
+                if (power < 0) power = 0;
+                await channel.send(`*A breif chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
+                await updatePowerMessage();
+            }
+        });
 
-        return; // Skip normal processing for sabotage
+        collector.on('end', collected => {
+            if (collected.size === 0) {
+                power -= 35;
+                if (power < 0) power = 0;
+                channel.send(`*Theres a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                updatePowerMessage();
+            }
+        });
     }
+
+    return; // Skip normal processing for sabotage messages
+}
 
     // ----- NORMAL MESSAGE PROCESSING -----
     if (processingMessage) return;
