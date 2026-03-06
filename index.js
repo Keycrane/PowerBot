@@ -98,6 +98,7 @@ const triviaPool = [
 
 // ----- Trivia Answer Tracking -----
 const triviaMessages = new Set(); // store message IDs that are trivia answers
+let triviaActive = false;
 
 // ----- Update Power Bar -----
 async function updatePowerMessage() {
@@ -219,6 +220,11 @@ setInterval(async () => {
 client.on('messageCreate', async msg => {
     if (msg.author.bot) return;
 
+    // Block normal processing while trivia is active
+    if (triviaActive && msg.author.id !== saboteurUserId) {
+        return;
+    }
+
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
@@ -235,14 +241,16 @@ client.on('messageCreate', async msg => {
         await msg.delete().catch(()=>{}); // delete the saboteur's "1"
 
         if (number === 1) {
+            if (triviaActive) return;
             const role = await msg.guild.roles.fetch(backawaysRoleId).catch(()=>null);
             if (!role) return;
 
             const randomTrivia = triviaPool[Math.floor(Math.random() * triviaPool.length)];
 
             const triviaQuestion = randomTrivia.question;
-            const correctAnswer = String(randomTrivia.answer).toLowerCase();
-            
+            const correctAnswer = randomTrivia.answer;
+
+            triviaActive = true;
             const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
             const filter = async m => {
@@ -254,13 +262,20 @@ client.on('messageCreate', async msg => {
             const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
 
             collector.on('collect', async answerMsg => {
+                triviaActive = false;
                 triviaMessages.add(answerMsg.id);
                 await triviaMsg.delete().catch(() => {});
 
                 let flavorText;
                 const member = await msg.guild.members.fetch(answerMsg.author.id).catch(()=>null);
 
-                if (answerMsg.content.trim().toLowerCase() === correctAnswer) {
+                const input = answerMsg.content.trim().toLowerCase();
+
+                const isCorrect = Array.isArray(correctAnswer)
+                    ? correctAnswer.map(a => a.toLowerCase()).includes(input)
+                    : input === correctAnswer.toLowerCase();
+                
+                if (isCorrect) {
                     flavorText = await channel.send(`***A frusterated groan is heard somewhere close by, before-...***\n**Nothing happened...**`);
                 } else {
                     power -= 25;
@@ -273,7 +288,9 @@ client.on('messageCreate', async msg => {
             });
 
             collector.on('end', async collected => {
+                triviaActive = false;
                 triviaMsg.delete().catch(() => {});
+                
                 if (collected.size === 0) {
                     power -= 35;
                     if (power < 0) power = 0;
