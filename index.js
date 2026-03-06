@@ -47,8 +47,8 @@ let recoveryTimeout = null;
 const saboteurUserId = '1005390783924404274'; // Replace with the ID of the user who triggers sabotage
 const backawaysRoleId = '1479263355385413672'; // Replace with the role ID to ping for trivia
 
-// Track trivia messages to ignore in normal handler
-const triviaMessages = new Set();
+// ----- Trivia Answer Tracking -----
+const triviaMessages = new Set(); // store message IDs that are trivia answers
 
 // ----- Update Power Bar -----
 async function updatePowerMessage() {
@@ -81,7 +81,6 @@ setInterval(async () => {
 
         await updatePowerMessage();
 
-        // ----- POWER HIT 0 -----
         if (power === 0) {
             if (!isLocked) {
                 await channel.permissionOverwrites.edit(
@@ -136,13 +135,11 @@ setInterval(async () => {
                 }, recoveryDelay);
             }
         }
-        // ----- UNLOCK IF POWER RETURNS -----
         else if (power > 0 && isLocked) {
             await channel.permissionOverwrites.edit(
                 channel.guild.roles.everyone,
                 { SendMessages: true }
             );
-
             console.log(`Unlocked ${channel.name}`);
             isLocked = false;
 
@@ -176,71 +173,67 @@ client.on('messageCreate', async msg => {
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
-// ----- SABOTAGE CHECK -----
-if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
-    const number = parseInt(msg.content.trim());
-
-    // Delete the saboteur number immediately
-    await msg.delete().catch(() => {});
-
-    if (number === 1) {
-        const role = msg.guild.roles.cache.get(backawaysRoleId);
-        if (!role) return;
-
-        const triviaQuestion = "What is 5 + 3?";
-        const correctAnswer = "8";
-
-        const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
-
-        const filter = m => !m.author.bot && role.members.has(m.author.id);
-        const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
-
-        collector.on('collect', async answerMsg => {
-            triviaMessages.add(answerMsg.id); // mark this message so normal handler ignores it
-
-            // Delete the trivia question
-            await triviaMsg.delete().catch(() => {});
-
-            let flavorText;
-            if (answerMsg.content.trim() === correctAnswer) {
-                flavorText = await channel.send(`***You hear a groan of dissapointment and then...*** \n **Nothing happened...**`);
-            } else {
-                power -= 25;
-                if (power < 0) power = 0;
-                flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...*** \n **The generator loses 25% power. Current Power: ${power}%**`);
-                await updatePowerMessage();
-            }
-
-            // Delete the flavor text after ~5 seconds
-            setTimeout(() => flavorText.delete().catch(() => {}), 5000);
-        });
-
-        collector.on('end', async collected => {
-            if (collected.size === 0) {
-                await triviaMsg.delete().catch(() => {}); // delete trivia question if nobody answered
-
-                power -= 35;
-                if (power < 0) power = 0;
-
-                const flavorText = await channel.send(`***There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*** \n **Current Power: ${power}%**`);
-                await updatePowerMessage();
-
-                setTimeout(() => flavorText.delete().catch(() => {}), 5000);
-            }
-        });
+    // ----- Skip trivia answers -----
+    if (triviaMessages.has(msg.id)) {
+        triviaMessages.delete(msg.id);
+        return;
     }
 
-    return; // Skip normal processing for saboteur numbers
-}
+    // ----- SABOTAGE CHECK -----
+    if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
+        const number = parseInt(msg.content.trim());
+
+        await msg.delete().catch(()=>{}); // delete the saboteur's "1"
+
+        if (number === 1) {
+            const role = msg.guild.roles.cache.get(backawaysRoleId);
+            if (!role) return;
+
+            const triviaQuestion = "What is 5 + 3?";
+            const correctAnswer = "8";
+
+            const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
+
+            const filter = m => !m.author.bot && role.members.has(m.author.id);
+            const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
+
+            collector.on('collect', async answerMsg => {
+                triviaMessages.add(answerMsg.id);
+
+                await triviaMsg.delete().catch(() => {});
+
+                let flavorText;
+                if (answerMsg.content.trim() === correctAnswer) {
+                    flavorText = await channel.send(`Nothing happened...`);
+                } else {
+                    power -= 25;
+                    if (power < 0) power = 0;
+                    flavorText = await channel.send(`*A brief chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
+                    await updatePowerMessage();
+                }
+
+                setTimeout(() => flavorText.delete().catch(() => {}), 5000);
+            });
+
+            collector.on('end', collected => {
+                if (collected.size === 0) {
+                    power -= 35;
+                    if (power < 0) power = 0;
+                    const flavorText = channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                    setTimeout(() => flavorText.then(f => f.delete().catch(() => {})), 5000);
+                    updatePowerMessage();
+                }
+            });
+        }
+
+        return; // Skip normal processing for sabotage
+    }
 
     // ----- NORMAL MESSAGE PROCESSING -----
     if (processingMessage) return;
     processingMessage = true;
 
     try {
-        // Ignore messages that were collected as trivia answers
-        if (triviaMessages.has(msg.id)) return;
-
         lastOperatorId = msg.author.id;
         const originalMessage = msg.content;
 
@@ -253,7 +246,6 @@ if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
         const criticalFailureChance = 0.01;
         const criticalSuccessChance = 0.01;
 
-        // ----- CRITICAL FAILURE -----
         if (roll < criticalFailureChance) {
             powerChange = -Math.floor(Math.random()*26) - 50;
             power += powerChange;
@@ -263,11 +255,8 @@ if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
 
             const member = await msg.guild.members.fetch(msg.author.id).catch(()=>null);
             const role = msg.guild.roles.cache.get(criticalFailureRoleId);
-            if (member && role && !member.roles.cache.has(role.id)) {
-                member.roles.add(role).catch(console.error);
-            }
+            if (member && role && !member.roles.cache.has(role.id)) member.roles.add(role).catch(console.error);
         }
-        // ----- CRITICAL SUCCESS -----
         else if (roll > 1 - criticalSuccessChance) {
             powerChange = Math.floor(Math.random()*26) + 50;
             power += powerChange;
@@ -277,40 +266,28 @@ if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
 
             const member = await msg.guild.members.fetch(msg.author.id).catch(()=>null);
             const role = msg.guild.roles.cache.get(criticalSuccessRoleId);
-            if (member && role && !member.roles.cache.has(role.id)) {
-                member.roles.add(role).catch(console.error);
-            }
+            if (member && role && !member.roles.cache.has(role.id)) member.roles.add(role).catch(console.error);
         }
-        // ----- NORMAL FAILURE -----
         else if (roll < 0.15) {
             powerChange = -(Math.floor(Math.random()*11)+5);
             power += powerChange;
             if (power < 0) power = 0;
 
-            if (powerChange >= -7)
-                resultText = `Idiot detected >:(\nMinor damage caused.`;
-            else if (powerChange >= -11)
-                resultText = `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
-            else
-                resultText = `[01011001 01001111 01010101 ...]`;
+            if (powerChange >= -7) resultText = `Idiot detected >:(\nMinor damage caused.`;
+            else if (powerChange >= -11) resultText = `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
+            else resultText = `[01011001 01001111 01010101 ...]`;
         }
-        // ----- NORMAL SUCCESS -----
         else {
             powerChange = Math.floor(Math.random()*16)+5;
             power += powerChange;
             if (power > maxPower) power = maxPower;
 
-            if (powerChange <= 8)
-                resultText = `System stabilization successful.\nUsage of duct tape was detected during repairs.\nYour success has surprised me.`;
-            else if (powerChange <= 14)
-                resultText = `System stabilization successful.\nMechanical services acceptable.\nThank you :)`;
-            else
-                resultText = `Major repair completed.\nPower grid efficiency restored.\nYou make me happy :D`;
+            if (powerChange <= 8) resultText = `System stabilization successful.\nUsage of duct tape was detected during repairs.\nYour success has surprised me.`;
+            else if (powerChange <= 14) resultText = `System stabilization successful.\nMechanical services acceptable.\nThank you :)`;
+            else resultText = `Major repair completed.\nPower grid efficiency restored.\nYou make me happy :D`;
         }
 
-        if (lastLogMessage) {
-            await lastLogMessage.delete().catch(()=>{});
-        }
+        if (lastLogMessage) await lastLogMessage.delete().catch(()=>{});
 
         lastLogMessage = await channel.send(
 `POWER GRID TERMINAL
