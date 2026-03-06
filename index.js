@@ -211,7 +211,7 @@ client.on('messageCreate', async msg => {
                 const member = await msg.guild.members.fetch(answerMsg.author.id).catch(()=>null);
 
                 if (answerMsg.content.trim() === correctAnswer) {
-                    flavorText = await channel.send(`***A frusterated ground is heard somewhere close by, before-...***\n**Nothing happened...**`);
+                    flavorText = await channel.send(`***A frusterated groan is heard somewhere close by, before-...***\n**Nothing happened...**`);
                 } else {
                     power -= 25;
                     if (power < 0) power = 0;
@@ -227,7 +227,7 @@ client.on('messageCreate', async msg => {
                 if (collected.size === 0) {
                     power -= 35;
                     if (power < 0) power = 0;
-                    const flavorText = await channel.send(`***There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD***\n**Current Power: ${power}%**`);
+                    const flavorText = await channel.send(`***There's a sudden scoff of annoyance- and then-... sparks fly. followed by a loud THUD.***\n**Current Power: ${power}%**`);
                     setTimeout(() => flavorText.delete().catch(() => {}), 5000);
                     await updatePowerMessage();
                 }
