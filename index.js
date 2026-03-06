@@ -240,6 +240,7 @@ client.on('messageCreate', async msg => {
     }
 
     // ----- NORMAL MESSAGE PROCESSING -----
+    if (triviaActive) return;
     if (processingMessage) return;
     processingMessage = true;
 
