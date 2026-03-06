@@ -203,11 +203,11 @@ if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
 
             let flavorText;
             if (answerMsg.content.trim() === correctAnswer) {
-                flavorText = await channel.send(`Nothing happened...`);
+                flavorText = await channel.send(`***You hear a groan of dissapointment and then...*** \n **Nothing happened...**`);
             } else {
                 power -= 25;
                 if (power < 0) power = 0;
-                flavorText = await channel.send(`*A brief chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
+                flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...*** \n **The generator loses 25% power. Current Power: ${power}%**`);
                 await updatePowerMessage();
             }
 
@@ -222,7 +222,7 @@ if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
                 power -= 35;
                 if (power < 0) power = 0;
 
-                const flavorText = await channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                const flavorText = await channel.send(`***There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*** \n **Current Power: ${power}%**`);
                 await updatePowerMessage();
 
                 setTimeout(() => flavorText.delete().catch(() => {}), 5000);
