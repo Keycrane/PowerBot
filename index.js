@@ -176,50 +176,62 @@ client.on('messageCreate', async msg => {
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
-    // ----- SABOTAGE CHECK -----
-    if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
-        const number = parseInt(msg.content.trim());
+// ----- SABOTAGE CHECK -----
+if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
+    const number = parseInt(msg.content.trim());
 
-        // Delete the saboteur number immediately
-        await msg.delete().catch(() => {});
+    // Delete the saboteur number immediately
+    await msg.delete().catch(() => {});
 
-        if (number === 1) {
-            const role = msg.guild.roles.cache.get(backawaysRoleId);
-            if (!role) return;
+    if (number === 1) {
+        const role = msg.guild.roles.cache.get(backawaysRoleId);
+        if (!role) return;
 
-            const triviaQuestion = "What is 5 + 3?";
-            const correctAnswer = "8";
+        const triviaQuestion = "What is 5 + 3?";
+        const correctAnswer = "8";
 
-            await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
+        const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
-            const filter = m => !m.author.bot && role.members.has(m.author.id);
-            const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
+        const filter = m => !m.author.bot && role.members.has(m.author.id);
+        const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
 
-            collector.on('collect', async answerMsg => {
-                triviaMessages.add(answerMsg.id); // mark this message so normal handler ignores it
+        collector.on('collect', async answerMsg => {
+            triviaMessages.add(answerMsg.id); // mark this message so normal handler ignores it
 
-                if (answerMsg.content.trim() === correctAnswer) {
-                    await channel.send(`Nothing happened...`);
-                } else {
-                    power -= 25;
-                    if (power < 0) power = 0;
-                    await channel.send(`*A brief chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
-                    await updatePowerMessage();
-                }
-            });
+            // Delete the trivia question
+            await triviaMsg.delete().catch(() => {});
 
-            collector.on('end', collected => {
-                if (collected.size === 0) {
-                    power -= 35;
-                    if (power < 0) power = 0;
-                    channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
-                    updatePowerMessage();
-                }
-            });
-        }
+            let flavorText;
+            if (answerMsg.content.trim() === correctAnswer) {
+                flavorText = await channel.send(`Nothing happened...`);
+            } else {
+                power -= 25;
+                if (power < 0) power = 0;
+                flavorText = await channel.send(`*A brief chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
+                await updatePowerMessage();
+            }
 
-        return; // Skip normal processing for saboteur numbers
+            // Delete the flavor text after ~5 seconds
+            setTimeout(() => flavorText.delete().catch(() => {}), 5000);
+        });
+
+        collector.on('end', async collected => {
+            if (collected.size === 0) {
+                await triviaMsg.delete().catch(() => {}); // delete trivia question if nobody answered
+
+                power -= 35;
+                if (power < 0) power = 0;
+
+                const flavorText = await channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                await updatePowerMessage();
+
+                setTimeout(() => flavorText.delete().catch(() => {}), 5000);
+            }
+        });
     }
+
+    return; // Skip normal processing for saboteur numbers
+}
 
     // ----- NORMAL MESSAGE PROCESSING -----
     if (processingMessage) return;
