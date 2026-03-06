@@ -241,8 +241,8 @@ client.on('messageCreate', async msg => {
             const randomTrivia = triviaPool[Math.floor(Math.random() * triviaPool.length)];
 
             const triviaQuestion = randomTrivia.question;
-            const correctAnswer = randomTrivia.answer.toLowerCase();
-
+            const correctAnswer = String(randomTrivia.answer).toLowerCase();
+            
             const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
             const filter = async m => {
