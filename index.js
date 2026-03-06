@@ -44,11 +44,11 @@ let isLocked = false;
 let recoveryTimeout = null;
 
 // ----- Sabotage Configuration -----
-const saboteurUserId = '1005390783924404274'; // ID of the saboteur
-const backawaysRoleId = '1479263355385413672'; // Role to ping for trivia
+const saboteurUserId = '1005390783924404274';
+const backawaysRoleId = '1479263355385413672';
 
 // ----- Trivia Answer Tracking -----
-const triviaMessages = new Set(); // store message IDs that are trivia answers
+const triviaMessages = new Set(); 
 
 // ----- Update Power Bar -----
 async function updatePowerMessage() {
@@ -68,6 +68,36 @@ async function updatePowerMessage() {
     }
 }
 
+// ----- Lock & Assign Missing Role Function -----
+async function lockPowerChannel(channel) {
+    if (isLocked) return;
+    isLocked = true;
+
+    await channel.permissionOverwrites.edit(
+        channel.guild.roles.everyone,
+        { SendMessages: false }
+    ).catch(console.error);
+
+    console.log(`Locked ${channel.name}`);
+
+    // Apply slowmode
+    slowChannels.forEach(id => {
+        const ch = client.channels.cache.get(id);
+        if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
+    });
+
+    // Assign Missing role if there is a lastOperator
+    if (lastOperatorId) {
+        const member = await channel.guild.members.fetch(lastOperatorId).catch(()=>null);
+        const role = channel.guild.roles.cache.get(missingRoleId);
+
+        if (member && role && !member.roles.cache.has(role.id)) {
+            await member.roles.add(role).catch(console.error);
+            missingUserId = member.id;
+        }
+    }
+}
+
 // ----- Power Interval -----
 setInterval(async () => {
     try {
@@ -82,28 +112,7 @@ setInterval(async () => {
         await updatePowerMessage();
 
         if (power === 0) {
-            if (!isLocked) {
-                await channel.permissionOverwrites.edit(
-                    channel.guild.roles.everyone,
-                    { SendMessages: false }
-                );
-                console.log(`Locked ${channel.name}`);
-                isLocked = true;
-
-                slowChannels.forEach(id => {
-                    const ch = client.channels.cache.get(id);
-                    if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
-                });
-
-                if (lastOperatorId) {
-                    const member = await channel.guild.members.fetch(lastOperatorId).catch(()=>null);
-                    const role = channel.guild.roles.cache.get(missingRoleId);
-                    if (member && role && !member.roles.cache.has(role.id)) {
-                        await member.roles.add(role).catch(console.error);
-                        missingUserId = member.id;
-                    }
-                }
-            }
+            await lockPowerChannel(channel);
 
             if (!recoveryTimeout) {
                 recoveryTimeout = setTimeout(async () => {
@@ -183,7 +192,7 @@ client.on('messageCreate', async msg => {
     if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
         const number = parseInt(msg.content.trim());
 
-        await msg.delete().catch(() => {}); // Delete the saboteur's "1"
+        await msg.delete().catch(()=>{}); // delete saboteur's "1"
 
         if (number === 1) {
             const role = msg.guild.roles.cache.get(backawaysRoleId);
@@ -192,20 +201,18 @@ client.on('messageCreate', async msg => {
             const triviaQuestion = "What is 5 + 3?";
             const correctAnswer = "8";
 
-            // Send trivia question
             const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
             const filter = m => !m.author.bot && role.members.has(m.author.id);
             const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
 
             collector.on('collect', async answerMsg => {
-                triviaMessages.add(answerMsg.id); // skip normal processing
+                triviaMessages.add(answerMsg.id);
 
-                // Delete trivia question
+                lastOperatorId = answerMsg.author.id; // important for Missing role
                 await triviaMsg.delete().catch(() => {});
 
-                // Assign lastOperatorId to trivia responder so missing role can work
-                lastOperatorId = answerMsg.author.id;
+                if (power === 0) await lockPowerChannel(channel);
 
                 let flavorText;
                 if (answerMsg.content.trim() === correctAnswer) {
@@ -220,17 +227,17 @@ client.on('messageCreate', async msg => {
                 setTimeout(() => flavorText.delete().catch(() => {}), 5000);
             });
 
-            collector.on('end', async collected => {
-                // Delete trivia question just in case
+            collector.on('end', collected => {
                 triviaMsg.delete().catch(() => {});
-
+                
                 if (collected.size === 0) {
                     power -= 35;
                     if (power < 0) power = 0;
 
-                    const flavorText = await channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
-                    setTimeout(() => flavorText.delete().catch(() => {}), 5000);
-                    await updatePowerMessage();
+                    const flavorText = channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                    setTimeout(() => flavorText.then(f => f.delete().catch(() => {})), 5000);
+
+                    updatePowerMessage();
                 }
             });
         }
