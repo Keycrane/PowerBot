@@ -215,13 +215,18 @@ client.on('messageCreate', async msg => {
                 setTimeout(() => flavorText.delete().catch(() => {}), 5000);
             });
 
-            collector.on('end', collected => {
-                if (collected.size === 0) {
-                    power -= 35;
-                    if (power < 0) power = 0;
-                    const flavorText = channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
-                    setTimeout(() => flavorText.then(f => f.delete().catch(() => {})), 5000);
-                    updatePowerMessage();
+           collector.on('end', collected => {
+    // Delete the trivia question no matter what
+            triviaMsg.delete().catch(() => {});
+        
+            if (collected.size === 0) {
+                power -= 35;
+                if (power < 0) power = 0;
+        
+                const flavorText = channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                setTimeout(() => flavorText.then(f => f.delete().catch(() => {})), 5000);
+        
+                updatePowerMessage();
                 }
             });
         }
