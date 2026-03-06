@@ -44,8 +44,8 @@ let isLocked = false;
 let recoveryTimeout = null;
 
 // ----- Sabotage Configuration -----
-const saboteurUserId = '1005390783924404274'; // Replace with the ID of the user who triggers sabotage
-const backawaysRoleId = '1479263355385413672'; // Replace with the role ID to ping for trivia
+const saboteurUserId = '1005390783924404274'; // ID of the saboteur
+const backawaysRoleId = '1479263355385413672'; // Role to ping for trivia
 
 // ----- Trivia Answer Tracking -----
 const triviaMessages = new Set(); // store message IDs that are trivia answers
@@ -183,7 +183,7 @@ client.on('messageCreate', async msg => {
     if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
         const number = parseInt(msg.content.trim());
 
-        await msg.delete().catch(()=>{}); // delete the saboteur's "1"
+        await msg.delete().catch(() => {}); // Delete the saboteur's "1"
 
         if (number === 1) {
             const role = msg.guild.roles.cache.get(backawaysRoleId);
@@ -192,15 +192,20 @@ client.on('messageCreate', async msg => {
             const triviaQuestion = "What is 5 + 3?";
             const correctAnswer = "8";
 
+            // Send trivia question
             const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
             const filter = m => !m.author.bot && role.members.has(m.author.id);
             const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
 
             collector.on('collect', async answerMsg => {
-                triviaMessages.add(answerMsg.id);
+                triviaMessages.add(answerMsg.id); // skip normal processing
 
+                // Delete trivia question
                 await triviaMsg.delete().catch(() => {});
+
+                // Assign lastOperatorId to trivia responder so missing role can work
+                lastOperatorId = answerMsg.author.id;
 
                 let flavorText;
                 if (answerMsg.content.trim() === correctAnswer) {
@@ -215,18 +220,17 @@ client.on('messageCreate', async msg => {
                 setTimeout(() => flavorText.delete().catch(() => {}), 5000);
             });
 
-           collector.on('end', collected => {
-    // Delete the trivia question no matter what
-            triviaMsg.delete().catch(() => {});
-        
-            if (collected.size === 0) {
-                power -= 35;
-                if (power < 0) power = 0;
-        
-                const flavorText = channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
-                setTimeout(() => flavorText.then(f => f.delete().catch(() => {})), 5000);
-        
-                updatePowerMessage();
+            collector.on('end', async collected => {
+                // Delete trivia question just in case
+                triviaMsg.delete().catch(() => {});
+
+                if (collected.size === 0) {
+                    power -= 35;
+                    if (power < 0) power = 0;
+
+                    const flavorText = await channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
+                    setTimeout(() => flavorText.delete().catch(() => {}), 5000);
+                    await updatePowerMessage();
                 }
             });
         }
