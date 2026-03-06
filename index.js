@@ -204,27 +204,27 @@ client.on('messageCreate', async msg => {
             const triviaQuestion = "What is 5 + 3?"; // example, can randomize later
             const correctAnswer = "8";
 
-            await channel.send(`${role} ⚠️ Trivia Time! Answer quickly: ${triviaQuestion}`);
+            await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
             const filter = m => !m.author.bot && role.members.has(m.author.id);
-            const collector = channel.createMessageCollector({ filter, max: 1, time: 15000 });
+            const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
 
             collector.on('collect', async answerMsg => {
                 if (answerMsg.content.trim() === correctAnswer) {
-                    await channel.send(`✅ Correct! No power lost.`);
+                    await channel.send(`Nothing happened...`);
                 } else {
                     power -= 25;
                     if (power < 0) power = 0;
-                    await channel.send(`❌ Wrong! The generator loses 25% power! Current Power: ${power}%`);
+                    await channel.send(`*A breif chuckle is heard before sparks fly...*\nThe generator loses 25% power. Current Power: ${power}%`);
                     await updatePowerMessage();
                 }
             });
 
             collector.on('end', collected => {
                 if (collected.size === 0) {
-                    power -= 25;
+                    power -= 35;
                     if (power < 0) power = 0;
-                    channel.send(`⌛ Time's up! The generator loses 25% power! Current Power: ${power}%`);
+                    channel.send(`*Theres a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
                     updatePowerMessage();
                 }
             });
