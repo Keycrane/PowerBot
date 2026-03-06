@@ -48,6 +48,54 @@ let recoveryTimeout = null;
 const saboteurUserId = '1005390783924404274'; // Replace with the ID of the user who triggers sabotage
 const backawaysRoleId = '1479263355385413672'; // Replace with the role ID to ping for trivia
 
+// ----- Trivia Questions -----
+const triviaPool = [
+    {
+        question: "What is 9 plus 10?\n (PowerBot detected: Awnser contains numbers only)",
+        answer: "19"
+    },
+    {
+        question: "Whys was 6 afraid of seven?\n (PowerBot detected: Awnser contains numbers only)",
+        answer: ["789", "67"]
+    },
+    {
+        question: "Who is the bestest backaways member?\n (PowerBot detected: Awnser is VERY WRONG. and has one word)",
+        answer: "Tyro"
+    },
+    {
+        question: "GLORY GREATEST COUNTRY!!!\n (PowerBot detected: Awnser has one word, or can have multiple)",
+        answer: ["Glory to arstotzka", "Arstotzka"]
+    },
+    {
+        question: "What is BA-1s original STEAM username?\n (PowerBot detected: Awnser has one word, without any numbers",
+        answer: "Killer"
+    },
+    {
+        question: "What is David Lee's/Fire eyes IP address =) \n (P0w3rB0t d3te##3d: err",
+        answer: ["IDK", "TELL ME IT DAVID", "TELLMEITDAVID", "TELL ME IT FIRE", "TELLMEITFIRE", "", " "]
+    },
+    {
+        question: "What IS Fire?\n (P0w3R B##-...\n You know what you are =)",
+        answer: ["Tree-Fucking pixie", "Tree Fucking pixie", "TreeFuckingPixie", "TreeFucking pixie"]
+    },
+    {
+        question: "*I need cash nooow call:*\n (PowerBot detected: Awnser contains numbers, letters, spaces, AND dashes... Oh no...)",
+        answer: "JG Wentworth 877-CASH-NOW"
+    },
+    {
+        question: "What is blue and smells like red paint?\n (PowerBot detected: Awnser has Two Words)",
+        answer: "Blue paint"
+    },
+    {
+        question: "Who is the ULTIMATE side character?\n (PowerBot detected: Awnser has one word, and is very mean :C)",
+        answer: ["Stevan", "Yukito", "PowerBot"]
+    },
+    {
+        question: "Name one of my dogs =) \n (P0we4B0t d3#####: ErrR",
+        answer: ["Jingle", "Oakley", "Bear", "tiny"]
+    }
+];
+
 // ----- Trivia Answer Tracking -----
 const triviaMessages = new Set(); // store message IDs that are trivia answers
 
@@ -190,8 +238,10 @@ client.on('messageCreate', async msg => {
             const role = await msg.guild.roles.fetch(backawaysRoleId).catch(()=>null);
             if (!role) return;
 
-            const triviaQuestion = "What is 5 + 3?";
-            const correctAnswer = "8";
+            const randomTrivia = triviaPool[Math.floor(Math.random() * triviaPool.length)];
+
+            const triviaQuestion = randomTrivia.question;
+            const correctAnswer = randomTrivia.answer.toLowerCase();
 
             const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
@@ -210,7 +260,7 @@ client.on('messageCreate', async msg => {
                 let flavorText;
                 const member = await msg.guild.members.fetch(answerMsg.author.id).catch(()=>null);
 
-                if (answerMsg.content.trim() === correctAnswer) {
+                if (answerMsg.content.trim().toLowerCase() === correctAnswer) {
                     flavorText = await channel.send(`***A frusterated groan is heard somewhere close by, before-...***\n**Nothing happened...**`);
                 } else {
                     power -= 25;
