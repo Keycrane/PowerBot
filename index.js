@@ -48,7 +48,7 @@ const saboteurUserId = '1005390783924404274';
 const backawaysRoleId = '1479263355385413672';
 
 // ----- Trivia Answer Tracking -----
-const triviaMessages = new Set(); 
+const triviaMessages = new Set(); // store trivia answer message IDs
 
 // ----- Update Power Bar -----
 async function updatePowerMessage() {
@@ -58,7 +58,6 @@ async function updatePowerMessage() {
     const barLength = 20;
     const filled = Math.max(0, Math.floor((power / maxPower) * barLength));
     const empty = barLength - filled;
-
     const bar = '█'.repeat(filled) + '░'.repeat(empty);
 
     if (!powerMessage) {
@@ -68,32 +67,55 @@ async function updatePowerMessage() {
     }
 }
 
-// ----- Lock & Assign Missing Role Function -----
+// ----- Lock & Assign Missing Role -----
 async function lockPowerChannel(channel) {
-    if (isLocked) return;
-    isLocked = true;
+    if (!isLocked) {
+        await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
+        console.log(`Locked ${channel.name}`);
+        isLocked = true;
 
-    await channel.permissionOverwrites.edit(
-        channel.guild.roles.everyone,
-        { SendMessages: false }
-    ).catch(console.error);
+        // Apply slowmode
+        slowChannels.forEach(id => {
+            const ch = client.channels.cache.get(id);
+            if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
+        });
 
-    console.log(`Locked ${channel.name}`);
+        // Give Missing role to lastOperator
+        if (lastOperatorId) {
+            const member = await channel.guild.members.fetch(lastOperatorId).catch(() => null);
+            const role = channel.guild.roles.cache.get(missingRoleId);
+            if (member && role && !member.roles.cache.has(role.id)) {
+                await member.roles.add(role).catch(console.error);
+                missingUserId = member.id;
+            }
+        }
 
-    // Apply slowmode
-    slowChannels.forEach(id => {
-        const ch = client.channels.cache.get(id);
-        if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
-    });
+        // Start recovery timer
+        if (!recoveryTimeout) {
+            recoveryTimeout = setTimeout(async () => {
+                power += recoveryAmount;
+                if (power > maxPower) power = maxPower;
 
-    // Assign Missing role if there is a lastOperator
-    if (lastOperatorId) {
-        const member = await channel.guild.members.fetch(lastOperatorId).catch(()=>null);
-        const role = channel.guild.roles.cache.get(missingRoleId);
+                await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
+                console.log(`Unlocked ${channel.name}`);
+                isLocked = false;
 
-        if (member && role && !member.roles.cache.has(role.id)) {
-            await member.roles.add(role).catch(console.error);
-            missingUserId = member.id;
+                slowChannels.forEach(id => {
+                    const ch = client.channels.cache.get(id);
+                    if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
+                });
+
+                // Remove Missing role
+                if (missingUserId) {
+                    const member = await channel.guild.members.fetch(missingUserId).catch(() => null);
+                    const role = channel.guild.roles.cache.get(missingRoleId);
+                    if (member && role) await member.roles.remove(role).catch(console.error);
+                    missingUserId = null;
+                }
+
+                await updatePowerMessage();
+                recoveryTimeout = null;
+            }, recoveryDelay);
         }
     }
 }
@@ -111,44 +133,10 @@ setInterval(async () => {
 
         await updatePowerMessage();
 
-        if (power === 0) {
-            await lockPowerChannel(channel);
+        if (power === 0) await lockPowerChannel(channel);
 
-            if (!recoveryTimeout) {
-                recoveryTimeout = setTimeout(async () => {
-                    power += recoveryAmount;
-                    if (power > maxPower) power = maxPower;
-
-                    await channel.permissionOverwrites.edit(
-                        channel.guild.roles.everyone,
-                        { SendMessages: true }
-                    );
-
-                    console.log(`Unlocked ${channel.name}`);
-                    isLocked = false;
-
-                    slowChannels.forEach(id => {
-                        const ch = client.channels.cache.get(id);
-                        if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
-                    });
-
-                    if (missingUserId) {
-                        const member = await channel.guild.members.fetch(missingUserId).catch(()=>null);
-                        const role = channel.guild.roles.cache.get(missingRoleId);
-                        if (member && role) await member.roles.remove(role).catch(console.error);
-                        missingUserId = null;
-                    }
-
-                    await updatePowerMessage();
-                    recoveryTimeout = null;
-                }, recoveryDelay);
-            }
-        }
         else if (power > 0 && isLocked) {
-            await channel.permissionOverwrites.edit(
-                channel.guild.roles.everyone,
-                { SendMessages: true }
-            );
+            await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
             console.log(`Unlocked ${channel.name}`);
             isLocked = false;
 
@@ -163,7 +151,7 @@ setInterval(async () => {
             }
 
             if (missingUserId) {
-                const member = await channel.guild.members.fetch(missingUserId).catch(()=>null);
+                const member = await channel.guild.members.fetch(missingUserId).catch(() => null);
                 const role = channel.guild.roles.cache.get(missingRoleId);
                 if (member && role) await member.roles.remove(role).catch(console.error);
                 missingUserId = null;
@@ -182,7 +170,7 @@ client.on('messageCreate', async msg => {
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
-    // ----- Skip trivia answers -----
+    // ----- Skip trivia answer messages -----
     if (triviaMessages.has(msg.id)) {
         triviaMessages.delete(msg.id);
         return;
@@ -192,7 +180,7 @@ client.on('messageCreate', async msg => {
     if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
         const number = parseInt(msg.content.trim());
 
-        await msg.delete().catch(()=>{}); // delete saboteur's "1"
+        await msg.delete().catch(() => {}); // remove saboteur "1"
 
         if (number === 1) {
             const role = msg.guild.roles.cache.get(backawaysRoleId);
@@ -204,14 +192,15 @@ client.on('messageCreate', async msg => {
             const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
             const filter = m => !m.author.bot && role.members.has(m.author.id);
-            const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
+            const collector = channel.createMessageCollector({ filter, max: 1, time: 120000 });
 
             collector.on('collect', async answerMsg => {
                 triviaMessages.add(answerMsg.id);
 
-                lastOperatorId = answerMsg.author.id; // important for Missing role
-                await triviaMsg.delete().catch(() => {});
+                // Set the last operator to trivia answerer
+                lastOperatorId = answerMsg.author.id;
 
+                await triviaMsg.delete().catch(() => {});
                 if (power === 0) await lockPowerChannel(channel);
 
                 let flavorText;
@@ -229,10 +218,14 @@ client.on('messageCreate', async msg => {
 
             collector.on('end', collected => {
                 triviaMsg.delete().catch(() => {});
-                
+
                 if (collected.size === 0) {
+                    // If nobody answered, assign Missing role to saboteur
+                    lastOperatorId = msg.author.id;
                     power -= 35;
                     if (power < 0) power = 0;
+
+                    lockPowerChannel(channel);
 
                     const flavorText = channel.send(`*There's a sudden scoff of annoyance, before sparks fly, followed by a loud THUD*\nCurrent Power: ${power}%`);
                     setTimeout(() => flavorText.then(f => f.delete().catch(() => {})), 5000);
@@ -242,7 +235,7 @@ client.on('messageCreate', async msg => {
             });
         }
 
-        return; // Skip normal processing for sabotage
+        return; // Skip normal processing
     }
 
     // ----- NORMAL MESSAGE PROCESSING -----
@@ -252,49 +245,42 @@ client.on('messageCreate', async msg => {
     try {
         lastOperatorId = msg.author.id;
         const originalMessage = msg.content;
-
-        await msg.delete().catch(()=>{});
+        await msg.delete().catch(() => {});
 
         let powerChange;
         let resultText;
-
         const roll = Math.random();
         const criticalFailureChance = 0.01;
         const criticalSuccessChance = 0.01;
 
         if (roll < criticalFailureChance) {
-            powerChange = -Math.floor(Math.random()*26) - 50;
+            powerChange = -Math.floor(Math.random() * 26) - 50;
             power += powerChange;
             if (power < 0) power = 0;
-
             resultText = `!!!CRITICAL FAILURE!!!\nST4Y 4W47 F40M M3!!!!!`;
 
-            const member = await msg.guild.members.fetch(msg.author.id).catch(()=>null);
+            const member = await msg.guild.members.fetch(msg.author.id).catch(() => null);
             const role = msg.guild.roles.cache.get(criticalFailureRoleId);
             if (member && role && !member.roles.cache.has(role.id)) member.roles.add(role).catch(console.error);
-        }
-        else if (roll > 1 - criticalSuccessChance) {
-            powerChange = Math.floor(Math.random()*26) + 50;
+        } else if (roll > 1 - criticalSuccessChance) {
+            powerChange = Math.floor(Math.random() * 26) + 50;
             power += powerChange;
             if (power > maxPower) power = maxPower;
-
             resultText = `!!!CRITICAL SUCCESS!!!\nYay. You are my favorite meatbag.\nI'll tell the other bots about you :D`;
 
-            const member = await msg.guild.members.fetch(msg.author.id).catch(()=>null);
+            const member = await msg.guild.members.fetch(msg.author.id).catch(() => null);
             const role = msg.guild.roles.cache.get(criticalSuccessRoleId);
             if (member && role && !member.roles.cache.has(role.id)) member.roles.add(role).catch(console.error);
-        }
-        else if (roll < 0.15) {
-            powerChange = -(Math.floor(Math.random()*11)+5);
+        } else if (roll < 0.15) {
+            powerChange = -(Math.floor(Math.random() * 11) + 5);
             power += powerChange;
             if (power < 0) power = 0;
 
             if (powerChange >= -7) resultText = `Idiot detected >:(\nMinor damage caused.`;
             else if (powerChange >= -11) resultText = `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
             else resultText = `[01011001 01001111 01010101 ...]`;
-        }
-        else {
-            powerChange = Math.floor(Math.random()*16)+5;
+        } else {
+            powerChange = Math.floor(Math.random() * 16) + 5;
             power += powerChange;
             if (power > maxPower) power = maxPower;
 
@@ -303,7 +289,7 @@ client.on('messageCreate', async msg => {
             else resultText = `Major repair completed.\nPower grid efficiency restored.\nYou make me happy :D`;
         }
 
-        if (lastLogMessage) await lastLogMessage.delete().catch(()=>{});
+        if (lastLogMessage) await lastLogMessage.delete().catch(() => {});
 
         lastLogMessage = await channel.send(
 `POWER GRID TERMINAL
@@ -317,12 +303,11 @@ Notes:
 Result:
 ${resultText}
 
-Power Change: ${powerChange>0?'+':''}${powerChange}%
+Power Change: ${powerChange > 0 ? '+' : ''}${powerChange}%
 Current Power: ${power}%`
         );
 
         await updatePowerMessage();
-
     } catch (err) {
         console.error("Log system error:", err);
     } finally {
@@ -332,16 +317,16 @@ Current Power: ${power}%`
 
 // ----- Keep Alive Server -----
 const app = express();
-app.get('/', (req,res)=>res.send("Bot is alive!"));
+app.get('/', (req, res) => res.send("Bot is alive!"));
 const PORT = process.env.PORT || 3000;
-app.listen(PORT,()=>console.log(`Web server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
 // ----- Error Handling -----
 process.on('unhandledRejection', err => console.error(err));
 process.on('uncaughtException', err => console.error(err));
 
 // ----- Bot Login -----
-client.once('ready', ()=>{
+client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
     updatePowerMessage();
 });
