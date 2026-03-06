@@ -44,30 +44,61 @@ let processingMessage = false;
 let isLocked = false;
 let recoveryTimeout = null;
 
-// ----- Sabotage Configuration -----
+// ----- Sabotage / Trivia Configuration -----
 const saboteurUserId = '1005390783924404274';
 const backawaysRoleId = '1479263355385413672';
 
 // ----- Trivia Questions -----
 const triviaPool = [
-    { question: "What is 9 plus 10?\n (PowerBot detected: Awnser contains numbers only)", answer: "19" },
-    { question: "Whys was 6 afraid of seven?\n (PowerBot detected: Awnser contains numbers only)", answer: ["789", "67"] },
-    { question: "Who is the bestest backaways member?\n (PowerBot detected: Awnser is VERY WRONG. and has one word)", answer: "Tyro" },
-    { question: "GLORY GREATEST COUNTRY!!!\n (PowerBot detected: Awnser has one word, or can have multiple)", answer: ["Glory to arstotzka", "Arstotzka"] },
-    { question: "What is BA-1s original STEAM username?\n (PowerBot detected: Awnser has one word, without any numbers", answer: "Killer" },
-    { question: "What is David Lee's/Fire eyes IP address =) \n (P0w3rB0t d3te##3d: err", answer: ["IDK","TELL ME IT DAVID","TELLMEITDAVID","TELL ME IT FIRE","TELLMEITFIRE",""," "] },
-    { question: "What IS Fire?\n (P0w3R B##-...\n You know what you are =)", answer: ["Tree-Fucking pixie","Tree Fucking pixie","TreeFuckingPixie","TreeFucking pixie"] },
-    { question: "*I need cash nooow call:*\n (PowerBot detected: Awnser contains numbers, letters, spaces, AND dashes... Oh no...)", answer: "JG Wentworth 877-CASH-NOW" },
-    { question: "What is blue and smells like red paint?\n (PowerBot detected: Awnser has Two Words)", answer: "Blue paint" },
-    { question: "Who is the ULTIMATE side character?\n (PowerBot detected: Awnser has one word, and is very mean :C)", answer: ["Stevan","Yukito","PowerBot"] },
-    { question: "Name one of my dogs =) \n (P0we4B0t d3#####: ErrR", answer: ["Jingle","Oakley","Bear","tiny"] }
+    {
+        question: "What is 9 plus 10?\n (PowerBot detected: Answer contains numbers only)",
+        answer: "19"
+    },
+    {
+        question: "Why was 6 afraid of seven?\n (PowerBot detected: Answer contains numbers only)",
+        answer: ["789", "67"]
+    },
+    {
+        question: "Who is the bestest backaways member?\n (PowerBot detected: Answer is VERY WRONG. and has one word)",
+        answer: "Tyro"
+    },
+    {
+        question: "GLORY GREATEST COUNTRY!!!\n (PowerBot detected: Answer has one word, or can have multiple)",
+        answer: ["Glory to arstotzka", "Arstotzka"]
+    },
+    {
+        question: "What is BA-1s original STEAM username?\n (PowerBot detected: Answer has one word, without any numbers)",
+        answer: "Killer"
+    },
+    {
+        question: "What is David Lee's/Fire eyes IP address =) \n (P0w3rB0t detected: err",
+        answer: ["IDK", "TELL ME IT DAVID", "TELLMEITDAVID", "TELL ME IT FIRE", "TELLMEITFIRE", "", " "]
+    },
+    {
+        question: "What IS Fire?\n (P0w3R B##-...\n You know what you are =)",
+        answer: ["Tree-Fucking pixie", "Tree Fucking pixie", "TreeFuckingPixie", "TreeFucking pixie"]
+    },
+    {
+        question: "*I need cash nooow call:*\n (PowerBot detected: Answer contains numbers, letters, spaces, AND dashes... Oh no...)",
+        answer: "JG Wentworth 877-CASH-NOW"
+    },
+    {
+        question: "What is blue and smells like red paint?\n (PowerBot detected: Answer has Two Words)",
+        answer: "Blue paint"
+    },
+    {
+        question: "Who is the ULTIMATE side character?\n (PowerBot detected: Answer has one word, and is very mean :C)",
+        answer: ["Stevan", "Yukito", "PowerBot"]
+    },
+    {
+        question: "Name one of my dogs =) \n (P0we4B0t detected: ErrR)",
+        answer: ["Jingle", "Oakley", "Bear", "tiny"]
+    }
 ];
 
 // ----- Trivia Answer Tracking -----
 const triviaMessages = new Set();
 let triviaActive = false;
-let activeTriviaAnswers = [];
-let triviaQuestionMessage = null;
 
 // ----- Update Power Bar -----
 async function updatePowerMessage() {
@@ -77,6 +108,7 @@ async function updatePowerMessage() {
     const barLength = 20;
     const filled = Math.max(0, Math.floor((power / maxPower) * barLength));
     const empty = barLength - filled;
+
     const bar = '█'.repeat(filled) + '░'.repeat(empty);
 
     if (!powerMessage) {
@@ -92,32 +124,41 @@ setInterval(async () => {
         const channel = client.channels.cache.get(powerChannelId);
         if (!channel || !channel.isTextBased()) return;
 
-        if (power > 0) power = Math.max(0, power - powerDecay);
+        if (power > 0) {
+            power -= powerDecay;
+            if (power < 0) power = 0;
+        }
+
         await updatePowerMessage();
 
-        if (power === 0 && !isLocked) {
-            await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
-            isLocked = true;
+        if (power === 0) {
+            if (!isLocked) {
+                await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
+                console.log(`Locked ${channel.name}`);
+                isLocked = true;
 
-            slowChannels.forEach(id => {
-                const ch = client.channels.cache.get(id);
-                if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
-            });
+                slowChannels.forEach(id => {
+                    const ch = client.channels.cache.get(id);
+                    if (ch && ch.isTextBased()) ch.setRateLimitPerUser(10).catch(console.error);
+                });
 
-            if (lastOperatorId) {
-                const member = await channel.guild.members.fetch(lastOperatorId).catch(()=>null);
-                const role = await channel.guild.roles.fetch(missingRoleId).catch(()=>null);
-                if (member && role && !member.roles.cache.has(role.id)) {
-                    await member.roles.add(role).catch(console.error);
-                    missingUserId = member.id;
+                if (lastOperatorId) {
+                    const member = await channel.guild.members.fetch(lastOperatorId).catch(()=>null);
+                    const role = await channel.guild.roles.fetch(missingRoleId).catch(()=>null);
+                    if (member && role && !member.roles.cache.has(role.id)) {
+                        await member.roles.add(role).catch(console.error);
+                        missingUserId = member.id;
+                    }
                 }
             }
 
             if (!recoveryTimeout) {
                 recoveryTimeout = setTimeout(async () => {
-                    power = Math.min(maxPower, power + recoveryAmount);
+                    power += recoveryAmount;
+                    if (power > maxPower) power = maxPower;
 
                     await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
+                    console.log(`Unlocked ${channel.name}`);
                     isLocked = false;
 
                     slowChannels.forEach(id => {
@@ -136,15 +177,22 @@ setInterval(async () => {
                     recoveryTimeout = null;
                 }, recoveryDelay);
             }
-        } else if (power > 0 && isLocked) {
+        }
+        else if (power > 0 && isLocked) {
             await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
+            console.log(`Unlocked ${channel.name}`);
             isLocked = false;
+
             slowChannels.forEach(id => {
                 const ch = client.channels.cache.get(id);
                 if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
             });
 
-            if (recoveryTimeout) { clearTimeout(recoveryTimeout); recoveryTimeout = null; }
+            if (recoveryTimeout) {
+                clearTimeout(recoveryTimeout);
+                recoveryTimeout = null;
+            }
+
             if (missingUserId) {
                 const member = await channel.guild.members.fetch(missingUserId).catch(()=>null);
                 const role = await channel.guild.roles.fetch(missingRoleId).catch(()=>null);
@@ -161,48 +209,77 @@ setInterval(async () => {
 // ----- Message Handler -----
 client.on('messageCreate', async msg => {
     if (msg.author.bot) return;
+
     const channel = client.channels.cache.get(powerChannelId);
     if (!channel || msg.channel.id !== powerChannelId) return;
 
-    // ----- SABOTAGE CHECK -----
+    // ----- Skip trivia messages from powering the bot -----
+    if (triviaMessages.has(msg.id)) {
+        triviaMessages.delete(msg.id);
+        return;
+    }
+
+    // ----- SABOTAGE / Trivia Check -----
     if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
         const number = parseInt(msg.content.trim());
         await msg.delete().catch(()=>{});
-        if (number === 1 && !triviaActive) {
 
+        if (number === 1 && !triviaActive) {
             const role = await msg.guild.roles.fetch(backawaysRoleId).catch(()=>null);
             if (!role) return;
 
             const randomTrivia = triviaPool[Math.floor(Math.random() * triviaPool.length)];
             const triviaQuestion = randomTrivia.question;
-            activeTriviaAnswers = Array.isArray(randomTrivia.answer) ? randomTrivia.answer.map(a=>a.toLowerCase()) : [randomTrivia.answer.toLowerCase()];
+            const correctAnswer = randomTrivia.answer;
 
             triviaActive = true;
-            triviaQuestionMessage = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
+            const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
 
-            const collector = channel.createMessageCollector({ time: 10000 });
+            const filter = async m => {
+                if (m.author.bot) return false;
+                return true; // Anyone can answer
+            };
+
+            const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
+
             collector.on('collect', async answerMsg => {
+                triviaActive = false;
+                triviaMessages.add(answerMsg.id);
+                await triviaMsg.delete().catch(() => {});
+
                 const input = answerMsg.content.trim().toLowerCase();
-                if (activeTriviaAnswers.includes(input)) {
-                    triviaActive = false;
-                    await triviaQuestionMessage.delete().catch(()=>{});
-                    const flavor = await channel.send(`***A frustrated groan echoes through the facility...***\n**Nothing happened.**`);
-                    setTimeout(()=>flavor.delete().catch(()=>{}), 5000);
+                const isCorrect = Array.isArray(correctAnswer)
+                    ? correctAnswer.map(a => a.toLowerCase()).includes(input)
+                    : input === correctAnswer.toLowerCase();
+
+                let flavorText;
+                if (isCorrect) {
+                    flavorText = await channel.send(`***A frustrated groan is heard somewhere close by...***\n**Nothing happened...**`);
+                } else {
+                    power -= 25;
+                    if (power < 0) power = 0;
+                    flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 25% power. Current Power: ${power}%**`);
+                    await updatePowerMessage();
                 }
+
+                setTimeout(() => flavorText.delete().catch(() => {}), 5000);
             });
 
             collector.on('end', async collected => {
                 triviaActive = false;
-                if (triviaQuestionMessage) await triviaQuestionMessage.delete().catch(()=>{});
+                triviaMsg.delete().catch(() => {});
+
                 if (collected.size === 0) {
-                    power = Math.max(0, power - 35);
-                    const flavor = await channel.send(`***Sparks fly and a loud THUD is heard...***\n**Current Power: ${power}%**`);
-                    setTimeout(()=>flavor.delete().catch(()=>{}), 5000);
+                    power -= 35;
+                    if (power < 0) power = 0;
+                    const flavorText = await channel.send(`***There's a sudden scoff of annoyance- and then-... sparks fly, followed by a loud THUD.***\n**Current Power: ${power}%**`);
+                    setTimeout(() => flavorText.delete().catch(() => {}), 5000);
                     await updatePowerMessage();
                 }
             });
         }
-        return;
+
+        return; // Only skip normal processing for saboteur messages
     }
 
     // ----- NORMAL MESSAGE PROCESSING -----
@@ -212,38 +289,53 @@ client.on('messageCreate', async msg => {
     try {
         lastOperatorId = msg.author.id;
         const originalMessage = msg.content;
+
         await msg.delete().catch(()=>{});
 
-        let powerChange, resultText;
+        let powerChange;
+        let resultText;
         const roll = Math.random();
         const criticalFailureChance = 0.01;
         const criticalSuccessChance = 0.01;
 
         if (roll < criticalFailureChance) {
-            powerChange = -Math.floor(Math.random()*26)-50; power = Math.max(0,power+powerChange);
+            powerChange = -Math.floor(Math.random()*26) - 50;
+            power += powerChange;
+            if (power < 0) power = 0;
             resultText = `!!!CRITICAL FAILURE!!!\nST4Y 4W47 F40M M3!!!!!`;
             const member = await msg.guild.members.fetch(msg.author.id).catch(()=>null);
             const role = await msg.guild.roles.fetch(criticalFailureRoleId).catch(()=>null);
             if (member && role && !member.roles.cache.has(role.id)) await member.roles.add(role).catch(console.error);
         } else if (roll > 1 - criticalSuccessChance) {
-            powerChange = Math.floor(Math.random()*26)+50; power = Math.min(maxPower,power+powerChange);
+            powerChange = Math.floor(Math.random()*26) + 50;
+            power += powerChange;
+            if (power > maxPower) power = maxPower;
             resultText = `!!!CRITICAL SUCCESS!!!\nYay. You are my favorite meatbag.\nI'll tell the other bots about you :D`;
             const member = await msg.guild.members.fetch(msg.author.id).catch(()=>null);
             const role = await msg.guild.roles.fetch(criticalSuccessRoleId).catch(()=>null);
             if (member && role && !member.roles.cache.has(role.id)) await member.roles.add(role).catch(console.error);
         } else if (roll < 0.15) {
-            powerChange = -(Math.floor(Math.random()*11)+5); power = Math.max(0,power+powerChange);
-            if (powerChange >= -7) resultText = `Idiot detected >:(\nMinor damage caused.`;
-            else if (powerChange >= -11) resultText = `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
-            else resultText = `[01011001 01001111 01010101 00100000 01000001 01010010 01000101 00100000 01010100 01001000 01000101 00100000 01001101 01000101 01000001 01001110 01000101 01010011 01010100 00100000 01000010 01000001 01000011 01001011 01000001 01010111 01000001 01011001 00100000 01001101 01000101 01001101 01000010 01000101 01010010 00100000 00111010 01000011]`;
+            powerChange = -(Math.floor(Math.random()*11)+5);
+            power += powerChange;
+            if (power < 0) power = 0;
+            resultText = powerChange >= -7
+                ? `Idiot detected >:(\nMinor damage caused.`
+                : powerChange >= -11
+                ? `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`
+                : `[01011001 01001111 01010101 ...]`;
         } else {
-            powerChange = Math.floor(Math.random()*16)+5; power = Math.min(maxPower,power+powerChange);
-            if (powerChange <= 8) resultText = `System stabilization successful.\nUsage of duct tape was detected during repairs.\nYour success has surprised me.`;
-            else if (powerChange <= 14) resultText = `System stabilization successful.\nMechanical services acceptable.\nThank you :)`;
-            else resultText = `Major repair completed.\nPower grid efficiency restored.\nYou make me happy :D`;
+            powerChange = Math.floor(Math.random()*16)+5;
+            power += powerChange;
+            if (power > maxPower) power = maxPower;
+            resultText = powerChange <= 8
+                ? `System stabilization successful.\nUsage of duct tape was detected during repairs.\nYour success has surprised me.`
+                : powerChange <= 14
+                ? `System stabilization successful.\nMechanical services acceptable.\nThank you :)`
+                : `Major repair completed.\nPower grid efficiency restored.\nYou make me happy :D`;
         }
 
         if (lastLogMessage) await lastLogMessage.delete().catch(()=>{});
+
         lastLogMessage = await channel.send(
 `POWER GRID TERMINAL
 -------------------------
@@ -280,7 +372,7 @@ process.on('unhandledRejection', err => console.error(err));
 process.on('uncaughtException', err => console.error(err));
 
 // ----- Bot Login -----
-client.once('ready', ()=>{
+client.once('ready', ()=> {
     console.log(`Logged in as ${client.user.tag}`);
     updatePowerMessage();
 });
