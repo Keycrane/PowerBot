@@ -17,23 +17,27 @@ const client = new Client({
 // ----- Configuration -----
 let power = 100;
 const maxPower = 100;
-const powerDecay = 10;
-const intervalMs = 20000;
-const recoveryAmount = 65;
-const recoveryDelay = 10000;
+const powerDecay = 1;
+const intervalMs = 300000;
+const recoveryAmount = 67;
+const recoveryDelay = 28800000;
 
-const missingRoleId = '1479263627122053203';
+const missingRoleId = '1479623741506846741';
 let missingUserId = null;
 
-const criticalSuccessRoleId = '1479263606368501804';
-const criticalFailureRoleId = '1479263624328384662';
+const criticalSuccessRoleId = '1479623726319276174';
+const criticalFailureRoleId = '1479623616319590451';
 
-const powerChannelId = '1074684871852691488';
+const powerChannelId = '1479622905439719424';
 
 const slowChannels = [
-    '1074685958580080640',
-    '1074687038391074877',
-    '1074705588761677845'
+    '1444811009507459073',
+    '1444809596484059156',
+    '1444804838729842838',
+    '1444805065998205058',
+    '1444805046251552880',
+    '1444805255572230185',
+    '1444805192364327002'
 ];
 
 let powerMessage;
@@ -45,8 +49,8 @@ let isLocked = false;
 let recoveryTimeout = null;
 
 // ----- Sabotage / Trivia Configuration -----
-const saboteurUserId = '1005390783924404274';
-const backawaysRoleId = '1479263355385413672';
+const saboteurUserId = '1042092688801013901';
+const backawaysRoleId = '1446339217763340298';
 
 // ----- Trivia Questions -----
 const triviaPool = [
@@ -209,7 +213,7 @@ client.on('messageCreate', async msg => {
                 let flavorText;
 
                 if (isCorrect) {
-                    flavorText = await channel.send(`***A frustrated groan is heard somewhere close by...***\n**Nothing happened...**`);
+                    flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, a quick scurry away...***\n**Nothing happened...**`);
                 } else {
                     power -= 25;
                     if (power < 0) power = 0;
@@ -220,7 +224,7 @@ client.on('messageCreate', async msg => {
                 setTimeout(() => {
                     flavorText.delete().catch(() => {});
                     triviaAnswerLock = false;
-                }, 5000);
+                }, 1200000);
             });
 
             collector.on('end', async collected => {
