@@ -22,6 +22,7 @@ const intervalMs = 300000;
 const recoveryAmount = 67;
 const recoveryDelay = 28800000;
 
+const lowPowerRoleId = '1479873423692927157';
 const missingRoleId = '1479623741506846741';
 let missingUserId = null;
 
@@ -103,6 +104,21 @@ setInterval(async () => {
 
         if (power === 0 && !isLocked) {
             await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: false });
+            
+            // Give everyone Low Power role
+            const role = await channel.guild.roles.fetch(lowPowerRoleId).catch(()=>null);
+            
+            if (role) {
+            
+                const members = await channel.guild.members.fetch();
+            
+                members.forEach(member => {
+                    if (!member.user.bot && !member.roles.cache.has(role.id)) {
+                        member.roles.add(role).catch(()=>{});
+                    }
+                });
+            }
+            
             console.log(`Locked ${channel.name}`);
             isLocked = true;
 
@@ -151,11 +167,26 @@ setInterval(async () => {
             console.log(`Unlocked ${channel.name}`);
             isLocked = false;
 
+            // Remove Low Power role from everyone
+            const role = await channel.guild.roles.fetch(lowPowerRoleId).catch(()=>null);
+            
+            if (role) {
+            
+                const members = await channel.guild.members.fetch();
+            
+                members.forEach(member => {
+                    if (member.roles.cache.has(role.id)) {
+                        member.roles.remove(role).catch(()=>{});
+                    }
+                });
+            }
+            // mAKE SLOW CHANNELS NOT SLOW
             slowChannels.forEach(id => {
                 const ch = client.channels.cache.get(id);
                 if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
             });
-
+            
+            // Get rid of missing role
             if (recoveryTimeout) { clearTimeout(recoveryTimeout); recoveryTimeout = null; }
             if (missingUserId) {
                 const member = await channel.guild.members.fetch(missingUserId).catch(()=>null);
@@ -194,7 +225,7 @@ client.on('messageCreate', async msg => {
             const correctAnswer = randomTrivia.answer;
 
             triviaActive = true;
-            const triviaMsg = await channel.send(`${role} Answer quickly: ${triviaQuestion}`);
+        const triviaMsg = await channel.send(`${role} *WARNING 5YS3TM C0mP4AMIS3D*\n P3#S3 He4# ##\n =) Awnser *now*: ${triviaQuestion}`);
 
             const filter = m => !m.author.bot;
             const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
@@ -213,7 +244,7 @@ client.on('messageCreate', async msg => {
                 let flavorText;
 
                 if (isCorrect) {
-                    flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, a quick scurry away...***\n**Nothing happened...**`);
+                    flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, something scurrys away...***\n**Nothing happened...**`);
                 } else {
                     power -= 25;
                     if (power < 0) power = 0;
