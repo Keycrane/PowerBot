@@ -18,8 +18,8 @@ const client = new Client({
 let power = 100;
 const maxPower = 100;
 const powerDecay = 1;
-const intervalMs = 300000;
-const recoveryAmount = 67;
+const intervalMs = 400000;
+const recoveryAmount = 77;
 const recoveryDelay = 28800000;
 
 const lowPowerRoleId = '1479873423692927157';
@@ -144,7 +144,22 @@ setInterval(async () => {
                     await channel.permissionOverwrites.edit(channel.guild.roles.everyone, { SendMessages: true });
                     console.log(`Unlocked ${channel.name}`);
                     isLocked = false;
-
+                    
+                    // Remove Low Power role from everyone
+                    const role = await channel.guild.roles.fetch(lowPowerRoleId).catch(()=>null);
+                    
+                    if (role) {
+                    
+                        const members = await channel.guild.members.fetch();
+                    
+                        members.forEach(member => {
+                            if (member.roles.cache.has(role.id)) {
+                                member.roles.remove(role).catch(()=>{});
+                            }
+                        });
+                    
+                    }
+                    
                     slowChannels.forEach(id => {
                         const ch = client.channels.cache.get(id);
                         if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
