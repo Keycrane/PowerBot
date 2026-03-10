@@ -243,7 +243,7 @@ client.on('messageCreate', async msg => {
         const triviaMsg = await channel.send(`${role} *WARNING 5YS3TM C0mP4AMIS3D*\n P3#S3 He4# ##\n =) Awnser *now*: ${triviaQuestion}`);
 
             const filter = m => !m.author.bot;
-            const collector = channel.createMessageCollector({ filter, max: 1, time: 10000 });
+            const collector = channel.createMessageCollector({ filter, max: 1, time: 1800000 });
 
             collector.on('collect', async answerMsg => {
                 triviaAnswerLock = true;
