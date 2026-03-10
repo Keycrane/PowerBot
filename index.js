@@ -270,7 +270,7 @@ client.on('messageCreate', async msg => {
                 setTimeout(() => {
                     flavorText.delete().catch(() => {});
                     triviaAnswerLock = false;
-                }, 1200000);
+                }, 10000);
             });
 
             collector.on('end', async collected => {
