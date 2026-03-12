@@ -56,7 +56,7 @@ const backawaysRoleId = '1446339217763340298';
 // ----- Trivia Questions -----
 const triviaPool = [
     { question: "What is 9 plus 10?\n**(PowerBot detected: Answer contains numbers only)**", answer: "19" },
-    { question: "Why was 6 afraid of seven?\n**(PowerBot detected: Answer contains numbers only)**", answer: ["789", "67"] },
+    { question: "Why was 6 afraid of seven?\n**(PowerBot detected: Answer contains numbers only, NO SPACES)**", answer: ["789", "67"] },
     { question: "Who is the bestest backaways member?\n**(PowerBot detected: Answer is VERY WRONG. and has one word)**", answer: "Tyro" },
     { question: "GLORY GREATEST COUNTRY!!!\n**(PowerBot detected: Answer has one word, or can have multiple)**", answer: ["Glory to arstotzka", "Arstotzka"] },
     { question: "What is BA-1s original STEAM username?\n**(PowerBot detected: Answer has one word, without any numbers)**", answer: "Killer" },
