@@ -55,17 +55,17 @@ const backawaysRoleId = '1446339217763340298';
 
 // ----- Trivia Questions -----
 const triviaPool = [
-    { question: "What is 9 plus 10?\n(PowerBot detected: Answer contains numbers only)", answer: "19" },
-    { question: "Why was 6 afraid of seven?\n(PowerBot detected: Answer contains numbers only)", answer: ["789", "67"] },
-    { question: "Who is the bestest backaways member?\n(PowerBot detected: Answer is VERY WRONG. and has one word)", answer: "Tyro" },
-    { question: "GLORY GREATEST COUNTRY!!!\n(PowerBot detected: Answer has one word, or can have multiple)", answer: ["Glory to arstotzka", "Arstotzka"] },
-    { question: "What is BA-1s original STEAM username?\n(PowerBot detected: Answer has one word, without any numbers)", answer: "Killer" },
-    { question: "What is David Lee's/Fire eyes IP address =)\n(PowerBot detected: err)", answer: ["IDK","TELL ME IT DAVID","TELLMEITDAVID","TELL ME IT FIRE","TELLMEITFIRE",""," "] },
-    { question: "What IS Fire?\n(PowerBot detected)", answer: ["Tree-Fucking pixie","Tree Fucking pixie","TreeFuckingPixie","TreeFucking pixie"] },
-    { question: "*I need cash now call:*\n(PowerBot detected: Answer contains numbers, letters, spaces, AND dashes)", answer: "JG Wentworth 877-CASH-NOW" },
-    { question: "What is blue and smells like red paint?\n(PowerBot detected: Answer has two words)", answer: "Blue paint" },
-    { question: "Who is the ULTIMATE side character?\n(PowerBot detected: Answer has one word, very mean)", answer: ["Stevan","Yukito","PowerBot"] },
-    { question: "Name one of my dogs =)\n(PowerBot detected)", answer: ["Jingle","Oakley","Bear","tiny"] }
+    { question: "What is 9 plus 10?\n**(PowerBot detected: Answer contains numbers only)**", answer: "19" },
+    { question: "Why was 6 afraid of seven?\n**(PowerBot detected: Answer contains numbers only)**", answer: ["789", "67"] },
+    { question: "Who is the bestest backaways member?\n**(PowerBot detected: Answer is VERY WRONG. and has one word)**", answer: "Tyro" },
+    { question: "GLORY GREATEST COUNTRY!!!\n**(PowerBot detected: Answer has one word, or can have multiple)**", answer: ["Glory to arstotzka", "Arstotzka"] },
+    { question: "What is BA-1s original STEAM username?\n**(PowerBot detected: Answer has one word, without any numbers)**", answer: "Killer" },
+    { question: "What is David Lee's/Fire eyes IP address =)\n**(P0werB0t d3t##t3d# 3##)**", answer: ["IDK","TELL ME IT DAVID","TELLMEITDAVID","TELL ME IT FIRE","TELLMEITFIRE",""," "] },
+    { question: "What IS Fire?\n**(PowerBot detected: Awnser is three words, and very mean :c)**", answer: ["Tree-Fucking pixie","Tree Fucking pixie","TreeFuckingPixie","TreeFucking pixie"] },
+    { question: "*I need cash now call:*\n**(PowerBot detected: Answer contains numbers, letters, spaces, AND dashes)**", answer: "JG Wentworth 877-CASH-NOW" },
+    { question: "What is blue and smells like red paint?\n**(PowerBot detected: Answer has two words)**", answer: "Blue paint" },
+    { question: "Who is the ULTIMATE side character?\n**(PowerBot detected: Answer has one word, and is mean :c)**", answer: ["Stevan","Yukito","PowerBot"] },
+    { question: "Name one of my dogs =)\n**(Pow34 B0# #3T###3#: 3RR)**", answer: ["Jingle","Oakley","Bear","tiny"] }
 ];
 
 // ----- Trivia Tracking -----
@@ -195,7 +195,7 @@ setInterval(async () => {
                     }
                 });
             }
-            // mAKE SLOW CHANNELS NOT SLOW
+            //MAKE SLOW CHANNELS NOT SLOW
             slowChannels.forEach(id => {
                 const ch = client.channels.cache.get(id);
                 if (ch && ch.isTextBased()) ch.setRateLimitPerUser(0).catch(console.error);
@@ -331,7 +331,7 @@ client.on('messageCreate', async msg => {
 
             if (powerChange >= -7) resultText = `Idiot detected >:(\nMinor damage caused.`;
             else if (powerChange >= -11) resultText = `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
-            else resultText = `[01011001 01001111 01010101 ...]`;
+            else resultText = `[01011001 01101111 01110101 00100111 01110010 01100101 00100000 01110100 01101000 01100101 00100000 01101101 01100101 01100001 01101110 01100101 01110011 01110100 00100000 01100010 01100001 01100011 01101011 01100001 01110111 01100001 01111001 00100000 00111010 01100011]`;
 
         } else { // Normal success
             powerChange = Math.floor(Math.random()*16)+5;
