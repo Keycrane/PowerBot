@@ -19,7 +19,7 @@ let power = 100;
 const maxPower = 100;
 const powerDecay = 1;
 const intervalMs = 400000;
-const recoveryAmount = 77;
+const recoveryAmount = 93;
 const recoveryDelay = 28800000;
 
 const lowPowerRoleId = '1479873423692927157';
@@ -261,7 +261,7 @@ client.on('messageCreate', async msg => {
                 if (isCorrect) {
                     flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, something scurrys away...***\n**Nothing happened...**`);
                 } else {
-                    power -= 25;
+                    power -= 15;
                     if (power < 0) power = 0;
                     flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 25% power. Current Power: ${power}%**`);
                     await updatePowerMessage();
@@ -277,7 +277,7 @@ client.on('messageCreate', async msg => {
                 triviaActive = false;
                 triviaMsg.delete().catch(() => {});
                 if (collected.size === 0) {
-                    power -= 35;
+                    power -= 20;
                     if (power < 0) power = 0;
                     const flavorText = await channel.send(`***There's a sudden scoff of annoyance- and then-... sparks fly followed by a loud THUD.***\n**Current Power: ${power}%**`);
                     setTimeout(() => flavorText.delete().catch(() => {}), 5000);
@@ -301,8 +301,8 @@ client.on('messageCreate', async msg => {
         let powerChange;
         let resultText;
         const roll = Math.random();
-        const criticalFailureChance = 0.01;
-        const criticalSuccessChance = 0.01;
+        const criticalFailureChance = 0.02;
+        const criticalSuccessChance = 0.02;
 
         if (roll < criticalFailureChance) { // Critical failure
             powerChange = -Math.floor(Math.random()*26) - 50;
@@ -331,7 +331,7 @@ client.on('messageCreate', async msg => {
 
             if (powerChange >= -7) resultText = `Idiot detected >:(\nMinor damage caused.`;
             else if (powerChange >= -11) resultText = `3RR0R.\nSY5T3M D454G3 D3TEC13D.\n3DUC4T3 TH15 1NDIV1DUAL PL7 :C`;
-            else resultText = `[01011001 01101111 01110101 00100111 01110010 01100101 00100000 01110100 01101000 01100101 00100000 01101101 01100101 01100001 01101110 01100101 01110011 01110100 00100000 01100010 01100001 01100011 01101011 01100001 01110111 01100001 01111001 00100000 00111010 01100011]`;
+            else resultText = `[Sio ezzj bolncha gz ux\n Qcff sio mnij c: C bzfj sio?\n Wz nbz :clmn ni mzhy nbcm ni elvhz ch YGmu C ehiq siol mzxlzn]`;
 
         } else { // Normal success
             powerChange = Math.floor(Math.random()*16)+5;
