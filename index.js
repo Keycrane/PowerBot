@@ -292,7 +292,7 @@ ${triviaQuestion}`
             } else {
                 power -= 15;
                 if (power < 0) power = 0;
-                flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 25% power. Current Power: ${power}%**`);
+                flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 15% power. Current Power: ${power}%**`);
                 await updatePowerMessage();
             }
 
