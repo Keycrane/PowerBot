@@ -51,31 +51,34 @@ let isLocked = false;
 let recoveryTimeout = null;
 
 // ----- Sabotage / Trivia Configuration -----
-const saboteurUserId = '1005390783924404274';
+const saboteurUserId = '1042092688801013901'; // Tyros (1042092688801013901) Kranes(1005390783924404274)
 const backawaysRoleId = '1446339217763340298';
 
 // ----- Trivia Questions -----
 const triviaPool = [
-    { question: "What is 9 plus 10?\n**(PowerBot detected: Answer contains numbers only)**", answer: "19", time: 1800000  },
-    { question: "Why was 6 afraid of seven?\n**(PowerBot detected: Answer contains numbers only, NO SPACES)**", answer: ["789", "67"], time: 1800000 },
-    { question: "Who is the bestest backaways member?\n**(PowerBot detected: Answer is VERY WRONG. and has one word)**", answer: "Tyro", time: 1800000 },
-    { question: "GLORY GREATEST COUNTRY!!!\n**(PowerBot detected: Answer has one word, or can have multiple)**", answer: ["Glory to arstotzka", "Arstotzka"], time: 1800000 },
-    { question: "What is BA-1s original STEAM username?\n**(PowerBot detected: Answer has one word, without any numbers)**", answer: "Killer", time: 1800000 },
-    { question: "What is David Lee's/Fire eyes IP address =)\n**(P0werB0t d3t##t3d# 3##)**", answer: ["IDK","TELL ME IT DAVID","TELLMEITDAVID","TELL ME IT FIRE","TELLMEITFIRE",""," "], time: 1800000 },
-    { question: "What IS Fire?\n**(PowerBot detected: Awnser is three words, and very mean :c)**", answer: ["Tree-Fucking pixie","Tree Fucking pixie","TreeFuckingPixie","TreeFucking pixie"], time: 1800000 },
-    { question: "*I need cash now call:*\n**(PowerBot detected: Answer contains numbers, letters, spaces, AND dashes)**", answer: "JG Wentworth 877-CASH-NOW", time: 1800000 },
-    { question: "What is blue and smells like red paint?\n**(PowerBot detected: Answer has two words)**", answer: "Blue paint", time: 1800000 },
-    { question: "Who is the ULTIMATE side character?\n**(PowerBot detected: Answer has one word, and is mean :c)**", answer: ["Stevan","Yukito","PowerBot"], time: 1800000 },
-    { question: "Name one of my dogs =)\n**(Pow34 B0# #3T###3#: 3RR)**", answer: ["Jingle","Oakley","Bear","tiny"], time: 1800000 }
+    { question: "What is 9 plus 10?\n**(PowerBot detected: Answer contains numbers only)**", answer: "19", time: 300000  }, // 5 mins
+    { question: "Why was 6 afraid of seven?\n**(PowerBot detected: Answer contains numbers only, NO SPACES)**", answer: ["789", "67"], time: 300000 }, // 5 mins
+    { question: "Who is the bestest backaways member?\n**(PowerBot detected: Answer is VERY WRONG. and has one word)**", answer: "Tyro", time: 300000 }, // 5 mins
+    { question: "GLORY GREATEST COUNTRY!!!\n**(PowerBot detected: Answer has one word, or can have multiple)**", answer: ["Glory to arstotzka", "Arstotzka"], time: 300000 }, // 5 mins
+    { question: "What is BA-1s original STEAM username?\n**(PowerBot detected: Answer has one word, without any numbers)**", answer: "Killer", time: 300000 }, // 5 mins
+    { question: "What is David Lee's/Fire eyes IP address =)\n**(P0werB0t d3t##t3d# 3##)**", answer: ["IDK","TELL ME IT DAVID","TELLMEITDAVID","TELL ME IT FIRE","TELLMEITFIRE",""," "], time: 1200000 }, // 20 mins
+    { question: "What IS Fire?\n**(PowerBot detected: Awnser is three words, and very mean :c)**", answer: ["Tree-Fucking pixie","Tree Fucking pixie","TreeFuckingPixie","TreeFucking pixie"], time: 300000 }, // 5 mins
+    { question: "*I need cash now call:*\n**(PowerBot detected: Answer contains numbers, letters, spaces, AND dashes)**", answer: "JG Wentworth 877-CASH-NOW", time: 300000 }, // 5 mins
+    { question: "What is blue and smells like red paint?\n**(PowerBot detected: Answer has two words)**", answer: "Blue paint", time: 300000 }, // 5 mins
+    { question: "Who is the ULTIMATE side character?\n**(PowerBot detected: Answer has one word, and is mean :c)**", answer: ["Stevan","Yukito","PowerBot"], time: 300000 }, // 5 mins
+    { question: "Name one of my dogs =)\n**(Pow34 B0# #3T###3#: 3RR)**", answer: ["Jingle","Oakley","Bear","tiny"], time: 1200000 } // 20 mins
 ];
 
 // ----- Code Puzzle Questions -----
 const codePuzzlePool = [
-    { question: "ERROR: Sequence corrupted\n2 4 8 16 ?", answer: "32", time: 1800000 },
-    { question: "ERROR: Sequence corrupted\n5 10 20 40 ?", answer: "80", time: 1800000 },
-    { question: "ERROR: Pattern failure\n1 1 2 3 5 ?", answer: "8", time: 1800000 },
-    { question: "ERROR: Pattern failure\n3 6 9 12 ?", answer: "15", time: 1800000 },
-    { question: "ERROR: Sequence corrupted\n100 90 80 70 ?", answer: "60", time: 1800000 }
+    { question: "ERROR: Sequence corrupted\n2 4 8 16 ?", answer: "32", time: 30000 }, // 30 secs
+    { question: "ERROR: Sequence corrupted\n5 10 20 40 ?", answer: "80", time: 30000 }, // 30 secs
+    { question: "ERROR: Pattern failure\n1 1 2 3 5 ?", answer: "8", time: 30000 }, // 30 secs
+    { question: "ERROR: Pattern failure\n3 6 9 12 ?", answer: "15", time: 30000 }, // 30 secs
+    { question: "ERROR: Sequence corrupted\n100 90 80 70 ?", answer: "60", time: 30000 }, // 30 secs
+    { question: "ERROR: Encoded Message\nRCVON IDIZ KGPN OZI", answer: "WHATS NINE PLUS TEN", time: 300000 }, // 5 mins
+    { question: "ERROR: Encoded Message\nXIZ BSF ZPV USZJOH TP IBSE", answer: "WHY ARE YOU TRYING SO HARD", time: 300000 }, // 5 mins
+    { question: "ERROR: Encoded Message\nNpcl bw pa pz zv tbjo lhzply", answer: "Give up it is so much easier", time: 300000 }, // 5 mins
 ];
 
 // ----- Trivia Tracking -----
@@ -312,7 +315,14 @@ ${randomEvent.question}`
                 `***System stabilizing...***\n**No power change.**`
             );
         } else {
-            power -= 15;
+            const isCodePuzzle = codePuzzlePool.some(p => p.question === randomEvent.question);
+
+            if (isCodePuzzle) {
+                power -= Math.floor(Math.random() * 6) + 5; // 5–10 power loss
+            } else {
+                power -= 15; // trivia harder penalty
+            }
+            
             if (power < 0) power = 0;
 
             response = await answerChannel.send(
