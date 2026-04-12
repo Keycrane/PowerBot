@@ -29,6 +29,7 @@ let missingUserId = null;
 const criticalSuccessRoleId = '1479623726319276174';
 const criticalFailureRoleId = '1479623616319590451';
 
+const triviaAnswerChannelId = '1492814491744731146';
 const powerChannelId = '1479622905439719424';
 
 const slowChannels = [
@@ -238,82 +239,105 @@ client.on('messageCreate', async msg => {
     // ----- SABOTAGE / TRIVIA -----
 if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
     const number = parseInt(msg.content.trim());
-    await msg.delete().catch(()=>{});
+    await msg.delete().catch(() => {});
 
-    if (!triviaActive) {
-        const role = await msg.guild.roles.fetch(backawaysRoleId).catch(()=>null);
-        if (!role) return;
+    if (triviaActive) return;
 
-        let randomEvent;
+    const role = await msg.guild.roles.fetch(backawaysRoleId).catch(() => null);
+    if (!role) return;
 
-        if (number === 1) {
-            randomEvent = triviaPool[Math.floor(Math.random() * triviaPool.length)];
-        } 
-        else if (number === 2) {
-            randomEvent = codePuzzlePool[Math.floor(Math.random() * codePuzzlePool.length)];
-        } 
-        else {
-            return;
-        }
+    let randomEvent;
 
-        const triviaQuestion = randomEvent.question;
-        const correctAnswer = randomEvent.answer;
+    if (number === 1) {
+        randomEvent = triviaPool[Math.floor(Math.random() * triviaPool.length)];
+    } 
+    else if (number === 2) {
+        randomEvent = codePuzzlePool[Math.floor(Math.random() * codePuzzlePool.length)];
+    } 
+    else {
+        return;
+    }
 
-        triviaActive = true;
+    const correctAnswer = randomEvent.answer;
 
-        const triviaMsg = await channel.send(
-`${role} 
+    triviaActive = true;
+
+    const triviaMsg = await channel.send(
+`${role}
 ⚠ SYSTEM MALFUNCTION ⚠
 Solve immediately:
-${triviaQuestion}`
-        );
-        const filter = m => !m.author.bot;
-        const collector = channel.createMessageCollector({
-        filter,
+${randomEvent.question}`
+    );
+
+    const answerChannel = msg.guild.channels.cache.get(triviaAnswerChannelId);
+    if (!answerChannel || !answerChannel.isTextBased()) {
+        triviaActive = false;
+        return;
+    }
+
+    const collector = answerChannel.createMessageCollector({
+        filter: m => !m.author.bot,
         max: 1,
         time: randomEvent.time || 60000
-        });
+    });
 
-        collector.on('collect', async answerMsg => {
-            triviaAnswerLock = true;
-            await answerMsg.delete().catch(()=>{});
-            triviaActive = false;
-            await triviaMsg.delete().catch(() => {});
+    collector.on('collect', async (answerMsg) => {
+        triviaAnswerLock = true;
 
-            const input = answerMsg.content.trim().toLowerCase();
-            const isCorrect = Array.isArray(correctAnswer)
-                ? correctAnswer.map(a => a.toLowerCase()).includes(input)
-                : input === correctAnswer.toLowerCase();
+        await answerMsg.delete().catch(() => {});
 
-            let flavorText;
+        const input = answerMsg.content.trim().toLowerCase();
 
-            if (isCorrect) {
-                flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, something scurrys away...***\n**Nothing happened...**`);
-            } else {
-                power -= 15;
-                if (power < 0) power = 0;
-                flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 15% power. Current Power: ${power}%**`);
-                await updatePowerMessage();
-            }
+        const isCorrect = Array.isArray(correctAnswer)
+            ? correctAnswer.map(a => a.toLowerCase()).includes(input)
+            : input === correctAnswer.toLowerCase();
+
+        let response;
+
+        if (isCorrect) {
+            response = await answerChannel.send(
+                `***System stabilizing...***\n**No power change.**`
+            );
+        } else {
+            power -= 15;
+            if (power < 0) power = 0;
+
+            response = await answerChannel.send(
+                `***ERROR DETECTED***\n**Power reduced. Current Power: ${power}%**`
+            );
+
+            await updatePowerMessage();
+        }
+
+        setTimeout(() => {
+            response.delete().catch(() => {});
+            triviaAnswerLock = false;
+        }, 10000);
+
+        triviaActive = false;
+        await triviaMsg.delete().catch(() => {});
+    });
+
+    collector.on('end', async (collected) => {
+        triviaActive = false;
+
+        await triviaMsg.delete().catch(() => {});
+
+        if (collected.size === 0) {
+            power -= 20;
+            if (power < 0) power = 0;
+
+            const timeoutMsg = await channel.send(
+                `***SYSTEM TIMEOUT***\n**Power destabilized. Current Power: ${power}%**`
+            );
 
             setTimeout(() => {
-                flavorText.delete().catch(() => {});
-                triviaAnswerLock = false;
-            }, 10000);
-        });
+                timeoutMsg.delete().catch(() => {});
+            }, 5000);
 
-        collector.on('end', async collected => {
-            triviaActive = false;
-            triviaMsg.delete().catch(() => {});
-            if (collected.size === 0) {
-                power -= 20;
-                if (power < 0) power = 0;
-                const flavorText = await channel.send(`***There's a sudden scoff of annoyance- and then-... sparks fly followed by a loud THUD.***\n**Current Power: ${power}%**`);
-                setTimeout(() => flavorText.delete().catch(() => {}), 5000);
-                await updatePowerMessage();
-            }
-        });
-    }
+            await updatePowerMessage();
+        }
+    });
 
     return;
 }
