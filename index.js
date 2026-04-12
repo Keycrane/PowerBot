@@ -50,7 +50,7 @@ let isLocked = false;
 let recoveryTimeout = null;
 
 // ----- Sabotage / Trivia Configuration -----
-const saboteurUserId = '1042092688801013901';
+const saboteurUserId = '1005390783924404274';
 const backawaysRoleId = '1446339217763340298';
 
 // ----- Trivia Questions -----
@@ -66,6 +66,15 @@ const triviaPool = [
     { question: "What is blue and smells like red paint?\n**(PowerBot detected: Answer has two words)**", answer: "Blue paint" },
     { question: "Who is the ULTIMATE side character?\n**(PowerBot detected: Answer has one word, and is mean :c)**", answer: ["Stevan","Yukito","PowerBot"] },
     { question: "Name one of my dogs =)\n**(Pow34 B0# #3T###3#: 3RR)**", answer: ["Jingle","Oakley","Bear","tiny"] }
+];
+
+// ----- Code Puzzle Questions -----
+const codePuzzlePool = [
+    { question: "ERROR: Sequence corrupted\n2 4 8 16 ?", answer: "32" },
+    { question: "ERROR: Sequence corrupted\n5 10 20 40 ?", answer: "80" },
+    { question: "ERROR: Pattern failure\n1 1 2 3 5 ?", answer: "8" },
+    { question: "ERROR: Pattern failure\n3 6 9 12 ?", answer: "15" },
+    { question: "ERROR: Sequence corrupted\n100 90 80 70 ?", answer: "60" }
 ];
 
 // ----- Trivia Tracking -----
@@ -227,67 +236,83 @@ client.on('messageCreate', async msg => {
     if (triviaActive || triviaAnswerLock) return;
 
     // ----- SABOTAGE / TRIVIA -----
-    if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
-        const number = parseInt(msg.content.trim());
-        await msg.delete().catch(()=>{});
+if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
+    const number = parseInt(msg.content.trim());
+    await msg.delete().catch(()=>{});
 
-        if (number === 1 && !triviaActive) {
-            const role = await msg.guild.roles.fetch(backawaysRoleId).catch(()=>null);
-            if (!role) return;
+    if (!triviaActive) {
+        const role = await msg.guild.roles.fetch(backawaysRoleId).catch(()=>null);
+        if (!role) return;
 
-            const randomTrivia = triviaPool[Math.floor(Math.random() * triviaPool.length)];
-            const triviaQuestion = randomTrivia.question;
-            const correctAnswer = randomTrivia.answer;
+        let randomEvent;
 
-            triviaActive = true;
-        const triviaMsg = await channel.send(`${role} *WARNING 5YS3TM C0mP4AMIS3D*\n P3#S3 He4# ##\n =) Awnser *now*: ${triviaQuestion}`);
-
-            const filter = m => !m.author.bot;
-            const collector = channel.createMessageCollector({ filter, max: 1, time: 1800000 });
-
-            collector.on('collect', async answerMsg => {
-                triviaAnswerLock = true;
-                await answerMsg.delete().catch(()=>{});
-                triviaActive = false;
-                await triviaMsg.delete().catch(() => {});
-
-                const input = answerMsg.content.trim().toLowerCase();
-                const isCorrect = Array.isArray(correctAnswer)
-                    ? correctAnswer.map(a => a.toLowerCase()).includes(input)
-                    : input === correctAnswer.toLowerCase();
-
-                let flavorText;
-
-                if (isCorrect) {
-                    flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, something scurrys away...***\n**Nothing happened...**`);
-                } else {
-                    power -= 15;
-                    if (power < 0) power = 0;
-                    flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 25% power. Current Power: ${power}%**`);
-                    await updatePowerMessage();
-                }
-
-                setTimeout(() => {
-                    flavorText.delete().catch(() => {});
-                    triviaAnswerLock = false;
-                }, 10000);
-            });
-
-            collector.on('end', async collected => {
-                triviaActive = false;
-                triviaMsg.delete().catch(() => {});
-                if (collected.size === 0) {
-                    power -= 20;
-                    if (power < 0) power = 0;
-                    const flavorText = await channel.send(`***There's a sudden scoff of annoyance- and then-... sparks fly followed by a loud THUD.***\n**Current Power: ${power}%**`);
-                    setTimeout(() => flavorText.delete().catch(() => {}), 5000);
-                    await updatePowerMessage();
-                }
-            });
+        if (number === 1) {
+            randomEvent = triviaPool[Math.floor(Math.random() * triviaPool.length)];
+        } 
+        else if (number === 2) {
+            randomEvent = codePuzzlePool[Math.floor(Math.random() * codePuzzlePool.length)];
+        } 
+        else {
+            return;
         }
 
-        return; // Skip normal processing for sabotage
+        const triviaQuestion = randomEvent.question;
+        const correctAnswer = randomEvent.answer;
+
+        triviaActive = true;
+
+        const triviaMsg = await channel.send(
+`${role} ⚠ SYSTEM MALFUNCTION ⚠
+Solve immediately:
+${triviaQuestion}`
+        );
+
+        const filter = m => !m.author.bot;
+        const collector = channel.createMessageCollector({ filter, max: 1, time: 1800000 });
+
+        collector.on('collect', async answerMsg => {
+            triviaAnswerLock = true;
+            await answerMsg.delete().catch(()=>{});
+            triviaActive = false;
+            await triviaMsg.delete().catch(() => {});
+
+            const input = answerMsg.content.trim().toLowerCase();
+            const isCorrect = Array.isArray(correctAnswer)
+                ? correctAnswer.map(a => a.toLowerCase()).includes(input)
+                : input === correctAnswer.toLowerCase();
+
+            let flavorText;
+
+            if (isCorrect) {
+                flavorText = await channel.send(`***A frustrated groan is heard somewhere close by, and then, something scurrys away...***\n**Nothing happened...**`);
+            } else {
+                power -= 15;
+                if (power < 0) power = 0;
+                flavorText = await channel.send(`***A brief chuckle is heard before sparks fly...***\n**The generator loses 25% power. Current Power: ${power}%**`);
+                await updatePowerMessage();
+            }
+
+            setTimeout(() => {
+                flavorText.delete().catch(() => {});
+                triviaAnswerLock = false;
+            }, 10000);
+        });
+
+        collector.on('end', async collected => {
+            triviaActive = false;
+            triviaMsg.delete().catch(() => {});
+            if (collected.size === 0) {
+                power -= 20;
+                if (power < 0) power = 0;
+                const flavorText = await channel.send(`***There's a sudden scoff of annoyance- and then-... sparks fly followed by a loud THUD.***\n**Current Power: ${power}%**`);
+                setTimeout(() => flavorText.delete().catch(() => {}), 5000);
+                await updatePowerMessage();
+            }
+        });
     }
+
+    return;
+}
 
     // ----- NORMAL MESSAGE PROCESSING -----
     if (processingMessage) return;
