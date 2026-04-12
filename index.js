@@ -262,7 +262,10 @@ if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
 
     triviaActive = true;
 
-    const triviaMsg = await channel.send(
+    const questionChannel = msg.guild.channels.cache.get(triviaAnswerChannelId);
+    if (!questionChannel || !questionChannel.isTextBased()) return;
+    
+    const triviaMsg = await questionChannel.send(
 `${role}
 ⚠ SYSTEM MALFUNCTION ⚠
 Solve immediately:
