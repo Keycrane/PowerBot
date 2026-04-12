@@ -234,7 +234,17 @@ client.on('messageCreate', async msg => {
     if (!channel || msg.channel.id !== powerChannelId) return;
 
     // Skip normal power processing during trivia
-    if (triviaActive || triviaAnswerLock) return;
+    if (triviaActive || triviaAnswerLock) {
+    await msg.delete().catch(() => {});
+
+    const errorMsg = await msg.channel.send("ERROR\n SY5T3M CUR3NTLY C0MP4OMIS3D\n +NULL");
+
+    setTimeout(() => {
+        errorMsg.delete().catch(() => {});
+    }, 3000);
+
+    return;
+}
 
     // ----- SABOTAGE / TRIVIA -----
 if (msg.author.id === saboteurUserId && /^\d+$/.test(msg.content.trim())) {
