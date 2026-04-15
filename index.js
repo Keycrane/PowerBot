@@ -22,6 +22,8 @@ const intervalMs = 400000;
 const recoveryAmount = 93;
 const recoveryDelay = 28800000;
 
+const FireEyesRole = '1444801071838134464';
+
 const lowPowerRoleId = '1479873423692927157';
 const missingRoleId = '1479623741506846741';
 let missingUserId = null;
@@ -79,6 +81,12 @@ const codePuzzlePool = [
     { question: "ERROR: Encoded Message\nRCVON IDIZ KGPN OZI", answer: "WHATS NINE PLUS TEN", time: 300000 }, // 5 mins
     { question: "ERROR: Encoded Message\nXIZ BSF ZPV USZJOH TP IBSE", answer: "WHY ARE YOU TRYING SO HARD", time: 300000 }, // 5 mins
     { question: "ERROR: Encoded Message\nNpcl bw pa pz zv tbjo lhzply", answer: "Give up it is so much easier", time: 300000 }, // 5 mins
+];
+
+const FiresPuzzlePool = [
+    { question: "ERROR Encoded Message: 23 21 24 19 26 15 28 11 30 7 36 ?", answer: "5", time: 60000 },
+    { question: "ERROR: Sequence corrupted → Upx3ifo", answer: "Failur3", time: 60000 },
+    { question: "SCRAMBLED: pometnoint (lowercase)", answer: "omnipotent", time: 10000 }
 ];
 
 // ----- Trivia Tracking -----
@@ -311,6 +319,82 @@ ${randomEvent.question}`
         let response;
 
         if (isCorrect) {
+        response = await answerChannel.send(
+            `***System stabilizing...***\n**No power change.**`
+        );
+    
+        const member = await msg.guild.members.fetch(answerMsg.author.id).catch(() => null);
+    
+        if (member && member.roles.cache.has(FireEyesRole)) {
+            // Delay slightly so it feels intentional
+            setTimeout(async () => {
+                const hardEvent = FiresPuzzlePool[Math.floor(Math.random() * FiresPuzzlePool.length)];
+    
+                const hardMsg = await answerChannel.send(
+                `**"FUCK FIREEYES" SYSTEM OVERRIDE DETECTED**
+                Good luck, Brainiac =) :
+                
+                ${hardEvent.question}`
+                );
+
+            const hardCollector = answerChannel.createMessageCollector({
+                filter: m => m.author.id === answerMsg.author.id,
+                max: 1,
+                time: hardEvent.time || 20000
+            });
+
+            hardCollector.on('collect', async hardAnswer => {
+                await hardAnswer.delete().catch(()=>{});
+
+                const input = hardAnswer.content.trim().toLowerCase();
+                const correct = Array.isArray(hardEvent.answer)
+                    ? hardEvent.answer.map(a => a.toLowerCase()).includes(input)
+                    : input === hardEvent.answer.toLowerCase();
+
+                let result;
+
+                if (correct) {
+                    power += 10;
+                    if (power > maxPower) power = maxPower;
+
+                    result = await answerChannel.send(
+                        `⚡ **OVERRIDE SUCCESSFUL**\n+10 Power\nCurrent Power: ${power}%`
+                    );
+                } else {
+                    power -= 10;
+                    if (power < 0) power = 0;
+
+                    result = await answerChannel.send(
+                        `💀 **OVERRIDE FAILED**\n-10 Power\nCurrent Power: ${power}%`
+                    );
+                }
+
+                await updatePowerMessage();
+
+                setTimeout(() => {
+                    result.delete().catch(()=>{});
+                }, 8000);
+
+                hardMsg.delete().catch(()=>{});
+            });
+
+            hardCollector.on('end', async collected => {
+                if (collected.size === 0) {
+                    const failMsg = await answerChannel.send(
+                        `⌛ **OVERRIDE TIMEOUT**`
+                    );
+
+                    setTimeout(() => {
+                        failMsg.delete().catch(()=>{});
+                    }, 5000);
+
+                    hardMsg.delete().catch(()=>{});
+                }
+            });
+
+        }, 2000);
+    }
+}
             response = await answerChannel.send(
                 `***System stabilizing...***\n**No power change.**`
             );
