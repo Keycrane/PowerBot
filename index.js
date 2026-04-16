@@ -514,6 +514,8 @@ ${randomEvent.question}`
             else resultText = `Major repair completed.\nPower grid efficiency restored.\nYou make me happy :D`;
         }
 
+        const channel = client.channels.cache.get(powerChannelId);
+        if (!channel || !channel.isTextBased()) return;
         if (lastLogMessage) await lastLogMessage.delete().catch(()=>{});
         lastLogMessage = await channel.send(
 `POWER GRID TERMINAL
