@@ -56,6 +56,13 @@ let recoveryTimeout = null;
 const saboteurUserId = '1042092688801013901'; // Tyros (1042092688801013901) Kranes(1005390783924404274)
 const backawaysRoleId = '1446339217763340298';
 
+let triviaActive = false;
+let triviaAnswerLock = false;
+
+function resetTriviaState() {
+    triviaActive = false;
+    triviaAnswerLock = false;
+}
 // ----- Trivia Questions -----
 const triviaPool = [
     { question: "What is 9 plus 10?\n**(PowerBot detected: Answer contains numbers only)**", answer: "19", time: 300000  }, // 5 mins
@@ -90,8 +97,7 @@ const FiresPuzzlePool = [
 ];
 
 // ----- Trivia Tracking -----
-let triviaActive = false;
-let triviaAnswerLock = false; // prevents trivia answers powering the bot
+resetTriviaState(); // prevents trivia answers powering the bot
 
 // ----- Update Power Bar -----
 async function updatePowerMessage() {
@@ -397,8 +403,7 @@ ${randomEvent.question}`
             }
         
             // ✅ ALWAYS unlock here as a fallback
-            triviaAnswerLock = false;
-            triviaActive = false;
+            resetTriviaState();
         });
         }, 2000);
     }
@@ -424,20 +429,21 @@ ${randomEvent.question}`
             await updatePowerMessage();
         }
 
+        if (response) {
         setTimeout(() => {
-        response.delete().catch(() => {});
+            response.delete().catch(() => {});
         }, 10000);
+    }
         
         // Only unlock if NO hard puzzle triggered
-        if (!(member && member.roles.cache.has(FireEyesRole))) {
-            triviaAnswerLock = false;
-            triviaActive = false;
+        if (!member || !member.roles.cache.has(FireEyesRole)) {
+        resetTriviaState();
         }
         await triviaMsg.delete().catch(() => {});
     });
 
     collector.on('end', async (collected) => {
-    if (triviaAnswerLock) return; // HARD PUZZLE STILL RUNNING
+    if (triviaAnswerLock || !triviaActive) return; // HARD PUZZLE STILL RUNNING
 
         await triviaMsg.delete().catch(() => {});
 
@@ -467,7 +473,9 @@ ${randomEvent.question}`
     try {
         lastOperatorId = msg.author.id;
         const originalMessage = msg.content;
-        await msg.delete().catch(()=>{});
+        if (msg.deletable) {
+        await msg.delete().catch(() => {});
+        }
 
         let powerChange;
         let resultText;
