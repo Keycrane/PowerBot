@@ -245,6 +245,7 @@ setInterval(async () => {
 
 // ----- Message Handler -----
 client.on('messageCreate', async msg => {
+    if (!msg.guild) return;
     if (msg.author.bot) return;
 
     const channel = client.channels.cache.get(powerChannelId);
@@ -312,135 +313,137 @@ ${randomEvent.question}`
     });
 
     collector.on('collect', async (answerMsg) => {
-        triviaAnswerLock = true;
+    triviaAnswerLock = true;
 
-        await answerMsg.delete().catch(() => {});
+    await answerMsg.delete().catch(() => {});
 
-        const input = answerMsg.content.trim().toLowerCase();
+    const input = answerMsg.content.trim().toLowerCase();
 
-        const isCorrect = Array.isArray(correctAnswer)
-            ? correctAnswer.map(a => a.toLowerCase()).includes(input)
-            : input === correctAnswer.toLowerCase();
+    const isCorrect = Array.isArray(correctAnswer)
+        ? correctAnswer.map(a => a.toLowerCase()).includes(input)
+        : input === correctAnswer.toLowerCase();
 
-        let response;
+    const member = await msg.guild.members.fetch(answerMsg.author.id).catch(() => null);
 
-        const member = await msg.guild.members.fetch(answerMsg.author.id).catch(() => null);
-        
-        if (isCorrect) {
+    let response;
+
+    if (isCorrect) {
         response = await answerChannel.send(
             `***System stabilizing...***\n**No power change.**`
         );
-    
-            if (member && member.roles.cache.has(FireEyesRole) && Math.random() < 0.5) {
-            // Delay slightly so it feels intentional
+
+        // FireEyes hard puzzle trigger
+        if (
+            member &&
+            member.roles.cache.has(FireEyesRole) &&
+            Math.random() < 0.5
+        ) {
             setTimeout(async () => {
-                const hardEvent = FiresPuzzlePool[Math.floor(Math.random() * FiresPuzzlePool.length)];
-    
+                const hardEvent =
+                    FiresPuzzlePool[Math.floor(Math.random() * FiresPuzzlePool.length)];
+
                 const hardMsg = await answerChannel.send(
-                `**"FUCK FIREEYES" SYSTEM OVERRIDE DETECTED**
-                Good luck, Brainiac =) :
-                
-                ${hardEvent.question}`
+                    `**"FIRE EYES OVERRIDE DETECTED"**\nGood luck, Brainiac =)\n\n${hardEvent.question}`
                 );
 
-            const hardCollector = answerChannel.createMessageCollector({
-                filter: m => m.author.id === answerMsg.author.id,
-                max: 1,
-                time: hardEvent.time || 20000
-            });
+                const hardCollector = answerChannel.createMessageCollector({
+                    filter: m => m.author.id === answerMsg.author.id,
+                    max: 1,
+                    time: hardEvent.time || 20000
+                });
 
-            hardCollector.on('collect', async hardAnswer => {
-                await hardAnswer.delete().catch(()=>{});
+                hardCollector.on('collect', async hardAnswer => {
+                    await hardAnswer.delete().catch(() => {});
 
-                const input = hardAnswer.content.trim().toLowerCase();
-                const correct = Array.isArray(hardEvent.answer)
-                    ? hardEvent.answer.map(a => a.toLowerCase()).includes(input)
-                    : input === hardEvent.answer.toLowerCase();
+                    const input2 = hardAnswer.content.trim().toLowerCase();
 
-                let result;
+                    const correct = Array.isArray(hardEvent.answer)
+                        ? hardEvent.answer.map(a => a.toLowerCase()).includes(input2)
+                        : input2 === hardEvent.answer.toLowerCase();
 
-                if (correct) {
-                    power += 10;
-                    if (power > maxPower) power = maxPower;
+                    let result;
 
-                    result = await answerChannel.send(
-                        `⚡ **OVERRIDE SUCCESSFUL**\n+10 Power\nCurrent Power: ${power}%`
-                    );
-                } else {
-                    power -= 10;
-                    if (power < 0) power = 0;
+                    if (correct) {
+                        power += 10;
+                        if (power > maxPower) power = maxPower;
 
-                    result = await answerChannel.send(
-                        `**OVERRIDE FAILED**\n-10 Power\nCurrent Power: ${power}%`
-                    );
-                }
+                        result = await answerChannel.send(
+                            `⚡ **OVERRIDE SUCCESSFUL**\n+10 Power\nCurrent Power: ${power}%`
+                        );
+                    } else {
+                        power -= 10;
+                        if (power < 0) power = 0;
 
-                await updatePowerMessage();
+                        result = await answerChannel.send(
+                            `**OVERRIDE FAILED**\n-10 Power\nCurrent Power: ${power}%`
+                        );
+                    }
 
-                setTimeout(() => {
-                    result.delete().catch(()=>{});
-                }, 8000);
+                    await updatePowerMessage();
 
-                hardMsg.delete().catch(()=>{});
-            });
+                    setTimeout(() => {
+                        result.delete().catch(() => {});
+                    }, 8000);
 
-            hardCollector.on('end', async collected => {
-           if (collected.size === 0) {
-                power -= 10;
-                if (power < 0) power = 0;     
-        
-                const failMsg = await answerChannel.send(
-                    `**OVERRIDE TIMEOUT**\n-10 Power\nCurrent Power: ${power}%`
-                );
-        
-                await updatePowerMessage();
-        
-                setTimeout(() => {
-                    failMsg.delete().catch(()=>{});
-                }, 5000);
-        
-                hardMsg.delete().catch(()=>{});
-            }
-        
-            // ✅ ALWAYS unlock here as a fallback
-            resetTriviaState();
-        });
-        }, 2000);
-    }
-}
-            response = await answerChannel.send(
-                `***System stabilizing...***\n**No power change.**`
-            );
-        } else {
-            const isCodePuzzle = codePuzzlePool.some(p => p.question === randomEvent.question);
+                    hardMsg.delete().catch(() => {});
+                });
 
-            if (isCodePuzzle) {
-                power -= Math.floor(Math.random() * 6) + 5; // 5–10 power loss
-            } else {
-                power -= 15; // trivia harder penalty
-            }
-            
-            if (power < 0) power = 0;
+                hardCollector.on('end', async collected => {
+                    if (collected.size === 0) {
+                        power -= 10;
+                        if (power < 0) power = 0;
 
-            response = await answerChannel.send(
-                `***ERROR DETECTED***\n**Power reduced. Current Power: ${power}%**`
-            );
+                        const failMsg = await answerChannel.send(
+                            `**OVERRIDE TIMEOUT**\n-10 Power\nCurrent Power: ${power}%`
+                        );
 
-            await updatePowerMessage();
+                        await updatePowerMessage();
+
+                        setTimeout(() => {
+                            failMsg.delete().catch(() => {});
+                        }, 5000);
+
+                        hardMsg.delete().catch(() => {});
+                    }
+
+                    resetTriviaState();
+                });
+            }, 2000);
         }
 
-        if (response) {
+    } else {
+        const isCodePuzzle = codePuzzlePool.some(
+            p => p.question === randomEvent.question
+        );
+
+        if (isCodePuzzle) {
+            power -= Math.floor(Math.random() * 6) + 5;
+        } else {
+            power -= 15;
+        }
+
+        if (power < 0) power = 0;
+
+        response = await answerChannel.send(
+            `***ERROR DETECTED***\n**Power reduced. Current Power: ${power}%**`
+        );
+
+        await updatePowerMessage();
+    }
+
+    if (response) {
         setTimeout(() => {
             response.delete().catch(() => {});
         }, 10000);
     }
-        
-        // Only unlock if NO hard puzzle triggered
-        if (!member || !member.roles.cache.has(FireEyesRole)) {
+
+    // Unlock trivia state (safe fallback)
+    if (!member || !member.roles.cache.has(FireEyesRole)) {
         resetTriviaState();
-        }
-        await triviaMsg.delete().catch(() => {});
-    });
+    }
+
+    await triviaMsg.delete().catch(() => {});
+});
 
     collector.on('end', async (collected) => {
     if (triviaAnswerLock || !triviaActive) return; // HARD PUZZLE STILL RUNNING
