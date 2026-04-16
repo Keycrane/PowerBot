@@ -318,14 +318,14 @@ ${randomEvent.question}`
 
         let response;
 
+        const member = await msg.guild.members.fetch(answerMsg.author.id).catch(() => null);
+        
         if (isCorrect) {
         response = await answerChannel.send(
             `***System stabilizing...***\n**No power change.**`
         );
     
-        const member = await msg.guild.members.fetch(answerMsg.author.id).catch(() => null);
-    
-        if (member && member.roles.cache.has(FireEyesRole)) {
+            if (member && member.roles.cache.has(FireEyesRole) && Math.random() < 0.5) {
             // Delay slightly so it feels intentional
             setTimeout(async () => {
                 const hardEvent = FiresPuzzlePool[Math.floor(Math.random() * FiresPuzzlePool.length)];
@@ -365,7 +365,7 @@ ${randomEvent.question}`
                     if (power < 0) power = 0;
 
                     result = await answerChannel.send(
-                        `💀 **OVERRIDE FAILED**\n-10 Power\nCurrent Power: ${power}%`
+                        `**OVERRIDE FAILED**\n-10 Power\nCurrent Power: ${power}%`
                     );
                 }
 
@@ -379,19 +379,27 @@ ${randomEvent.question}`
             });
 
             hardCollector.on('end', async collected => {
-                if (collected.size === 0) {
-                    const failMsg = await answerChannel.send(
-                        `⌛ **OVERRIDE TIMEOUT**`
-                    );
-
-                    setTimeout(() => {
-                        failMsg.delete().catch(()=>{});
-                    }, 5000);
-
-                    hardMsg.delete().catch(()=>{});
-                }
-            });
-
+           if (collected.size === 0) {
+                power -= 10;
+                if (power < 0) power = 0;     
+        
+                const failMsg = await answerChannel.send(
+                    `**OVERRIDE TIMEOUT**\n-10 Power\nCurrent Power: ${power}%`
+                );
+        
+                await updatePowerMessage();
+        
+                setTimeout(() => {
+                    failMsg.delete().catch(()=>{});
+                }, 5000);
+        
+                hardMsg.delete().catch(()=>{});
+            }
+        
+            // ✅ ALWAYS unlock here as a fallback
+            triviaAnswerLock = false;
+            triviaActive = false;
+        });
         }, 2000);
     }
 }
@@ -417,16 +425,19 @@ ${randomEvent.question}`
         }
 
         setTimeout(() => {
-            response.delete().catch(() => {});
-            triviaAnswerLock = false;
+        response.delete().catch(() => {});
         }, 10000);
-
-        triviaActive = false;
+        
+        // Only unlock if NO hard puzzle triggered
+        if (!(member && member.roles.cache.has(FireEyesRole))) {
+            triviaAnswerLock = false;
+            triviaActive = false;
+        }
         await triviaMsg.delete().catch(() => {});
     });
 
     collector.on('end', async (collected) => {
-        triviaActive = false;
+    if (triviaAnswerLock) return; // HARD PUZZLE STILL RUNNING
 
         await triviaMsg.delete().catch(() => {});
 
